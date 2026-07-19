@@ -23,7 +23,10 @@ export const COURSES: Course[] = [
     id: 2,
     title: "Desarrollo sustentable y ética ambiental",
     room: "Aula 106 | Grupo 05",
-    isPrimary: false
+    evaluation: "EXAMEN",
+    grade: 0,
+    progress: 25,
+    isPrimary: true
   }
 ];
 

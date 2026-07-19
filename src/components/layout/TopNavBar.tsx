@@ -3,7 +3,7 @@ import { TOPBAR_TEXTS } from '../../constants/texts';
 
 export const TopNavBar = () => {
   return (
-    <header className="sticky top-0 w-full z-30 bg-surface shadow-sm md:pl-64">
+    <header className="sticky top-0 w-full z-30 bg-surface shadow-sm">
       <div className="max-w-[1440px] mx-auto flex justify-between items-center px-gutter py-4">
 
         <div className="hidden md:flex flex-1 max-w-md">

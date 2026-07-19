@@ -5,7 +5,7 @@ import { CourseCard } from '../components/dashboard/CourseCard';
 
 export const Dashboard = () => {
   return (
-    <main className="md:pl-64 min-h-screen">
+    <main className="min-h-screen">
       <div className="max-w-[1200px] mx-auto p-gutter space-y-section-gap">
 
         {/* Greeting */}

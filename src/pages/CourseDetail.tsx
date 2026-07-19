@@ -1,16 +1,15 @@
-import { useParams, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { COURSE_TEXTS } from '../constants/texts';
 import { EXAMS_DATA, CURRENT_COURSE } from '../constants/mockData';
 import { ExamsTable } from '../components/course/ExamsTable';
 
 export const CourseDetail = () => {
-  const { id } = useParams();
 
   // Calculamos el porcentaje de progreso general
   const progressPercent = Math.round((CURRENT_COURSE.examsCompleted / CURRENT_COURSE.totalExams) * 100);
 
   return (
-    <main className="md:pl-64 min-h-screen bg-background pb-12">
+    <main className="min-h-screen bg-background pb-12">
       {/* Imagina que aquí arriba está tu <TopNavBar /> */}
 
       <div className="max-w-[1200px] mx-auto px-gutter py-8 space-y-section-gap">
