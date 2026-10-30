@@ -250,12 +250,13 @@ export interface ExamenSembrado {
   respuestas?: number[];
 }
 
-const revisar = (preguntas: Pregunta[], respuestas: number[]): PreguntaRevisada[] =>
+// Como el backend: la respuesta correcta solo viaja cuando el examen ya cerró en el grupo
+const revisar = (preguntas: Pregunta[], respuestas: number[], cerrado: boolean): PreguntaRevisada[] =>
   preguntas.map((p, i) => ({
     id: p.id ?? `p${i + 1}`,
     enunciado: p.enunciado,
     opciones: p.opciones,
-    respuestaCorrecta: p.respuestaCorrecta,
+    ...(cerrado ? { respuestaCorrecta: p.respuestaCorrecta } : {}),
     miRespuesta: respuestas[i] ?? -1,
     acierto: respuestas[i] === p.respuestaCorrecta,
   }));
@@ -286,7 +287,9 @@ export class ExamenesGrupoFalso implements ExamenesGrupoRepository {
     const examen = this.buscar(grupoId, examenId);
     if (!examen) return null;
     const { resumen, preguntas, respuestas } = examen;
-    if (resumen.miIntento && respuestas) return { ...resumen, preguntas: revisar(preguntas, respuestas) };
+    if (resumen.miIntento && respuestas) {
+      return { ...resumen, preguntas: revisar(preguntas, respuestas, resumen.ventana.estado === 'cerrada') };
+    }
     if (resumen.ventana.estado !== 'abierta') return { ...resumen, preguntas: [] };
     return {
       ...resumen,
@@ -302,7 +305,7 @@ export class ExamenesGrupoFalso implements ExamenesGrupoRepository {
     if (examen.resumen.ventana.estado === 'proxima') throw new ErrorAplicacion('El examen todavía no abre', 403);
     if (examen.resumen.miIntento) throw new ErrorAplicacion('Ya respondiste este examen', 409);
     if (respuestas.length !== examen.preguntas.length) throw new ErrorAplicacion('Cantidad de respuestas incorrecta', 400);
-    const revision = revisar(examen.preguntas, respuestas);
+    const revision = revisar(examen.preguntas, respuestas, false);
     const aciertos = revision.filter((p) => p.acierto).length;
     const resultado = {
       aciertos,
@@ -312,7 +315,7 @@ export class ExamenesGrupoFalso implements ExamenesGrupoRepository {
     };
     examen.resumen = { ...examen.resumen, miIntento: resultado };
     examen.respuestas = respuestas;
-    return { ...resultado, revision };
+    return { ...resultado, revision, ventana: examen.resumen.ventana };
   }
 
   async obtenerIntentos(_grupoId: string, examenId: string) {

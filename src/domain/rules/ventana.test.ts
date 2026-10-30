@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { Ventana } from '../entities/Examen';
 import { estadoDeVentana, puedeResponder } from './ventana';
 
-const ventana: Ventana = { abre: '2026-08-10T00:00:00.000Z', cierra: '2026-08-16T23:59:59.000Z', estado: 'abierta' };
+// Como la envía el backend: cierra al inicio de la semana siguiente, y ese instante ya cuenta como cerrado
+const ventana: Ventana = { abre: '2026-08-10T00:00:00.000Z', cierra: '2026-08-17T00:00:00.000Z', estado: 'abierta' };
 
 describe('estadoDeVentana', () => {
   it('calcula próxima, abierta y cerrada según la fecha actual', () => {

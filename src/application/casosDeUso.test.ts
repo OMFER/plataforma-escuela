@@ -75,7 +75,7 @@ describe('ResponderExamen (en un grupo)', () => {
     expect(r.examenesGrupo.respuestasRecibidas).toHaveLength(0);
   });
 
-  it('envía las respuestas y devuelve resultado con revisión por pregunta', async () => {
+  it('envía las respuestas y devuelve la revisión sin la clave mientras el examen sigue abierto', async () => {
     const r = preparar();
     const resultado = await new ResponderExamen(r.examenesGrupo).ejecutar({
       grupoId: 'g1',
@@ -85,10 +85,11 @@ describe('ResponderExamen (en un grupo)', () => {
     });
     expect(r.examenesGrupo.respuestasRecibidas).toEqual([[0, 0]]);
     expect(resultado).toMatchObject({ aciertos: 1, totalPreguntas: 2, calificacion: 5 });
-    expect(resultado.revision.map((p) => [p.miRespuesta, p.respuestaCorrecta, p.acierto])).toEqual([
-      [0, 0, true],
-      [0, 1, false],
+    expect(resultado.revision.map((p) => [p.miRespuesta, p.acierto, p.respuestaCorrecta])).toEqual([
+      [0, true, undefined],
+      [0, false, undefined],
     ]);
+    expect(resultado.ventana?.estado).toBe('abierta');
   });
 
   it('propaga el 409 si ya respondió y el 403 si la ventana cerró', async () => {

@@ -60,7 +60,11 @@ describe('pantalla de examen del alumno', () => {
     const segunda = screen.getByRole('article', { name: 'Pregunta 2' });
     expect(within(segunda).getByText('✗ Incorrecta')).toBeInTheDocument();
     expect(within(segunda).getByText('Rojo').closest('li')).toHaveTextContent('Tu respuesta');
-    expect(within(segunda).getByText('Azul').closest('li')).toHaveTextContent('Respuesta correcta');
+    // El examen sigue abierto para el grupo: la respuesta correcta todavía no se muestra
+    expect(within(segunda).getByText('Azul').closest('li')).not.toHaveTextContent('Respuesta correcta');
+    expect(screen.getByRole('note')).toHaveTextContent(
+      'Las respuestas correctas se mostrarán cuando cierre el examen, el 10 de enero de 2099',
+    );
     expect(within(screen.getByRole('article', { name: 'Pregunta 1' })).getByText('✓ Correcta')).toBeInTheDocument();
   });
 

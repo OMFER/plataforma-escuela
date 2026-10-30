@@ -1,7 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ErrorAplicacion } from '../domain/errors/ErrorAplicacion';
 import { FetchHttpClient, traducirError } from './http/FetchHttpClient';
-import { aCalificaciones, aExamen, aExamenGrupo, aGrupo, aIntento, aResumenExamen, aUsuario } from './mappers/mappers';
+import {
+  aCalificaciones,
+  aExamen,
+  aExamenGrupo,
+  aGrupo,
+  aIntento,
+  aResultadoConRevision,
+  aResumenExamen,
+  aUsuario,
+} from './mappers/mappers';
 import { HttpContenidoRepository } from './repositories/HttpContenidoRepository';
 import { HttpExamenesGrupoRepository } from './repositories/HttpExamenesGrupoRepository';
 import { HttpExamenesRepository } from './repositories/HttpExamenesRepository';
@@ -242,5 +251,25 @@ describe('LocalStorageSesionRepository', () => {
     const repo = new LocalStorageSesionRepository(roto);
     repo.guardar(sesion);
     expect(repo.obtener()).toEqual(sesion);
+  });
+});
+
+describe('revisión mientras el examen sigue abierto', () => {
+  it('no inventa una respuesta correcta si el backend aún no la envía, y conserva la ventana', () => {
+    const resultado = aResultadoConRevision({
+      aciertos: 1,
+      totalPreguntas: 1,
+      calificacion: 100,
+      fecha: '2026-08-12T15:00:00.000Z',
+      ventana: { abre: '2026-08-10T06:00:00.000Z', cierra: '2026-08-17T06:00:00.000Z', estado: 'abierta' },
+      revision: [{ _id: 'p1', enunciado: '¿?', opciones: ['a', 'b'], miRespuesta: 0, acierto: true }],
+    });
+    expect(resultado.revision[0]).not.toHaveProperty('respuestaCorrecta');
+    expect(resultado.ventana?.cierra).toBe('2026-08-17T06:00:00.000Z');
+  });
+
+  it('marca si la plantilla del examen ya tiene respuestas', () => {
+    const examen = aExamen({ _id: 'e1', materia: 'm1', tipo: 'Semanal', semana: 1, titulo: 'X', preguntas: [], tieneRespuestas: true });
+    expect(examen.tieneRespuestas).toBe(true);
   });
 });
