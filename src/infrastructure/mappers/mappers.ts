@@ -133,6 +133,7 @@ export const aExamen = (dto: ExamenDto): Examen => ({
     opciones: p.opciones,
     respuestaCorrecta: p.respuestaCorrecta ?? 0,
   })),
+  ...(typeof dto.tieneRespuestas === 'boolean' ? { tieneRespuestas: dto.tieneRespuestas } : {}),
 });
 
 export const aResultado = (dto: ResultadoIntentoDto): ResultadoIntento => ({
@@ -180,7 +181,7 @@ const aPreguntaRevisada = (dto: PreguntaDto, i: number): PreguntaRevisada => ({
   id: dto._id ?? String(i),
   enunciado: dto.enunciado,
   opciones: dto.opciones,
-  respuestaCorrecta: dto.respuestaCorrecta ?? -1,
+  ...(typeof dto.respuestaCorrecta === 'number' ? { respuestaCorrecta: dto.respuestaCorrecta } : {}),
   miRespuesta: dto.miRespuesta ?? -1,
   acierto: dto.acierto ?? false,
 });
@@ -188,6 +189,7 @@ const aPreguntaRevisada = (dto: PreguntaDto, i: number): PreguntaRevisada => ({
 export const aResultadoConRevision = (dto: ResultadoRevisionDto): ResultadoConRevision => ({
   ...aResultado(dto),
   revision: (dto.revision ?? []).map(aPreguntaRevisada),
+  ...(dto.ventana ? { ventana: aVentana(dto.ventana) } : {}),
 });
 
 export const aIntento = (dto: IntentoDto): IntentoAlumno => {

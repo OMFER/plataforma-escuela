@@ -95,6 +95,7 @@ export interface ExamenDto {
   descripcion?: string;
   puntajeMaximo?: number;
   diasExtra?: number;
+  tieneRespuestas?: boolean;
   preguntas?: PreguntaDto[];
 }
 
@@ -135,6 +136,7 @@ export interface ExamenesSemanaDto {
 
 export interface ResultadoRevisionDto extends ResultadoIntentoDto {
   revision?: PreguntaDto[];
+  ventana?: VentanaDto;
 }
 
 export interface IntentoDto extends ResultadoIntentoDto {
