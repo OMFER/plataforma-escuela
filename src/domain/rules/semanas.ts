@@ -1,4 +1,4 @@
-import type { Materia, Semana } from '../entities/Materia';
+import type { Semana } from '../entities/Grupo';
 
 const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
@@ -58,9 +58,9 @@ export const porcentajeAvance = (semanaActual: number, totalSemanas: number): nu
   return Math.round((completadas / totalSemanas) * 100);
 };
 
-/** Semana a la que conviene llevar al usuario al entrar a la materia. */
-export const semanaSugerida = (materia: Pick<Materia, 'semanaActual' | 'totalSemanas'>): number =>
-  Math.min(Math.max(materia.semanaActual, 1), Math.max(materia.totalSemanas, 1));
+/** Semana a la que conviene llevar al usuario al entrar al grupo. */
+export const semanaSugerida = (semanaActual: number, totalSemanas: number): number =>
+  Math.min(Math.max(semanaActual, 1), Math.max(totalSemanas, 1));
 
 export const esSemanaValida = (semana: number, totalSemanas: number): boolean =>
   Number.isInteger(semana) && semana >= 1 && semana <= totalSemanas;
