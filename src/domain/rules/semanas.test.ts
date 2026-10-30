@@ -44,8 +44,8 @@ describe('avance del curso', () => {
   });
 
   it('sugiere una semana dentro del rango válido', () => {
-    expect(semanaSugerida({ semanaActual: 0, totalSemanas: 16 })).toBe(1);
-    expect(semanaSugerida({ semanaActual: 7, totalSemanas: 16 })).toBe(7);
-    expect(semanaSugerida({ semanaActual: 17, totalSemanas: 16 })).toBe(16);
+    expect(semanaSugerida(0, 16)).toBe(1);
+    expect(semanaSugerida(7, 16)).toBe(7);
+    expect(semanaSugerida(17, 16)).toBe(16);
   });
 });
