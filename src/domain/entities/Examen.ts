@@ -40,6 +40,8 @@ export interface Examen {
   puntajeMaximo: number;
   diasExtra: number;
   preguntas: Pregunta[];
+  /** Si algún alumno, de cualquier grupo, ya lo respondió: preguntas y puntaje ya no cambian. */
+  tieneRespuestas?: boolean;
 }
 
 export interface CambiosExamen {
@@ -98,7 +100,8 @@ export interface PreguntaRevisada {
   id: string;
   enunciado: string;
   opciones: string[];
-  respuestaCorrecta: number;
+  /** Solo llega cuando el examen ya cerró en el grupo: antes, otros alumnos aún podrían responderlo. */
+  respuestaCorrecta?: number;
   miRespuesta: number;
   acierto: boolean;
 }
@@ -109,6 +112,8 @@ export interface ExamenGrupo extends ResumenExamen {
 
 export interface ResultadoConRevision extends ResultadoIntento {
   revision: PreguntaRevisada[];
+  /** Ventana del examen en el grupo: las respuestas correctas se muestran a partir de `cierra`. */
+  ventana?: Ventana;
 }
 
 export interface IntentoAlumno {
