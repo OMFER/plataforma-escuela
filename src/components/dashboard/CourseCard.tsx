@@ -32,11 +32,7 @@ export const CourseCard = ({ course }: CourseCardProps) => {
           <h3 className="text-title-md font-headline-lg text-on-surface mb-1">{course.title}</h3>
           <p className="text-body-sm text-outline">{course.room}</p>
           <div className="mt-4 flex items-center gap-2">
-            <span className="text-label-caps font-label-caps text-on-surface-variant">{APP_TEXTS.dashboard.evaluationMode}</span>
-            {/* TS sabrá que evaluation existe aquí, pero podríamos poner course.evaluation || 'N/A' por seguridad */}
-            <span className="px-2 py-0.5 bg-secondary-container text-on-secondary-container rounded text-[10px] font-bold">
-              {course.evaluation}
-            </span>
+            <span className="text-label-caps font-label-caps text-on-surface-variant">{course.evaluation}</span>
           </div>
         </div>
         <div className="flex flex-col items-end gap-3">
