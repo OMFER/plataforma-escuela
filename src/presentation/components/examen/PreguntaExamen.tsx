@@ -1,8 +1,8 @@
-import type { Pregunta } from '../../../domain/entities/Examen';
+import type { PreguntaVista } from '../../../domain/entities/Examen';
 
 interface PreguntaExamenProps {
   indice: number;
-  pregunta: Pregunta;
+  pregunta: Pick<PreguntaVista, 'enunciado' | 'opciones'>;
   seleccion: number | null;
   deshabilitada?: boolean;
   alElegir: (opcion: number) => void;

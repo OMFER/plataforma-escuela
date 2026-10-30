@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import type { Materia } from '../../../domain/entities/Materia';
+import type { Grupo } from '../../../domain/entities/Grupo';
 import { buscarSemana, formatearRangoSemana } from '../../../domain/rules/semanas';
 import { rutas } from '../../routes/rutas';
 import { estilos } from '../common/estilos';
@@ -7,15 +7,15 @@ import { estilos } from '../common/estilos';
 const ETIQUETA_ESTADO = { completada: 'Completada', actual: 'Semana actual', futura: 'Próxima' } as const;
 
 interface EncabezadoSemanaProps {
-  materiaId: string;
+  grupoId: string;
   semana: number;
-  materia?: Materia;
+  grupo?: Grupo | null;
   volverA?: { ruta: string; texto: string };
 }
 
-export const EncabezadoSemana = ({ materiaId, semana, materia, volverA }: EncabezadoSemanaProps) => {
-  const info = materia ? buscarSemana(materia.semanas, semana) : undefined;
-  const total = materia?.totalSemanas;
+export const EncabezadoSemana = ({ grupoId, semana, grupo, volverA }: EncabezadoSemanaProps) => {
+  const info = grupo ? buscarSemana(grupo.semanas, semana) : undefined;
+  const total = grupo?.materia.totalSemanas;
   const destino = volverA ?? { ruta: rutas.inicio, texto: 'Volver al inicio' };
 
   return (
@@ -26,7 +26,12 @@ export const EncabezadoSemana = ({ materiaId, semana, materia, volverA }: Encabe
       </Link>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="space-y-1">
-          {materia && <p className="text-title-md text-primary">{materia.nombre}</p>}
+          {grupo && (
+            <p className="text-title-md text-primary">
+              {grupo.materia.nombre}
+              <span className="text-body-sm text-on-surface-variant font-normal"> · Grupo {grupo.nombre} · {grupo.periodo}</span>
+            </p>
+          )}
           <h1 className="text-headline-lg-mobile md:text-headline-lg font-headline-lg text-on-surface">
             Semana {semana}
             {total ? <span className="text-on-surface-variant font-normal"> de {total}</span> : null}
@@ -44,13 +49,13 @@ export const EncabezadoSemana = ({ materiaId, semana, materia, volverA }: Encabe
         {!volverA && total ? (
           <nav className="flex gap-2" aria-label="Cambiar de semana">
             {semana > 1 && (
-              <Link to={rutas.semana(materiaId, semana - 1)} className={estilos.botonSecundario}>
+              <Link to={rutas.semana(grupoId, semana - 1)} className={estilos.botonSecundario}>
                 <span className="material-symbols-outlined text-[18px]">chevron_left</span>
                 Anterior
               </Link>
             )}
             {semana < total && (
-              <Link to={rutas.semana(materiaId, semana + 1)} className={estilos.botonSecundario}>
+              <Link to={rutas.semana(grupoId, semana + 1)} className={estilos.botonSecundario}>
                 Siguiente
                 <span className="material-symbols-outlined text-[18px]">chevron_right</span>
               </Link>

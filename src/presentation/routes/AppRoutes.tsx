@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { AdminPage } from '../pages/AdminPage';
+import { CalificacionesPage } from '../pages/CalificacionesPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { EditorContenidoPage } from '../pages/EditorContenidoPage';
 import { EditorExamenPage } from '../pages/EditorExamenPage';
@@ -17,14 +18,16 @@ export const AppRoutes = () => (
       <Route element={<Layout />}>
         <Route element={<RequiereRol roles={['alumno', 'maestro']} />}>
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/materias/:materiaId/semanas/:semana" element={<SemanaPage />} />
+          <Route path="/grupos/:grupoId/semanas/:semana" element={<SemanaPage />} />
+          <Route path="/grupos/:grupoId/calificaciones" element={<CalificacionesPage />} />
         </Route>
         <Route element={<RequiereRol roles={['maestro']} />}>
-          <Route path="/materias/:materiaId/semanas/:semana/contenido" element={<EditorContenidoPage />} />
-          <Route path="/materias/:materiaId/semanas/:semana/examen" element={<EditorExamenPage />} />
+          <Route path="/grupos/:grupoId/semanas/:semana/contenido" element={<EditorContenidoPage />} />
+          <Route path="/grupos/:grupoId/examenes/nuevo" element={<EditorExamenPage />} />
+          <Route path="/grupos/:grupoId/examenes/:examenId/editar" element={<EditorExamenPage />} />
         </Route>
         <Route element={<RequiereRol roles={['alumno']} />}>
-          <Route path="/examenes/:examenId" element={<ExamenPage />} />
+          <Route path="/grupos/:grupoId/examenes/:examenId" element={<ExamenPage />} />
         </Route>
         <Route element={<RequiereRol roles={['admin']} />}>
           <Route path="/admin" element={<AdminPage />} />

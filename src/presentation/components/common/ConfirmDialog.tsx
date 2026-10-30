@@ -6,6 +6,9 @@ interface ConfirmDialogProps {
   titulo: string;
   children: ReactNode;
   textoConfirmar: string;
+  textoOcupado?: string;
+  /** Pinta el botón de confirmar en rojo (acciones que borran datos). */
+  peligroso?: boolean;
   ocupado?: boolean;
   alConfirmar: () => void;
   alCancelar: () => void;
@@ -16,6 +19,8 @@ export const ConfirmDialog = ({
   titulo,
   children,
   textoConfirmar,
+  textoOcupado = 'Enviando…',
+  peligroso = false,
   ocupado = false,
   alConfirmar,
   alCancelar,
@@ -32,13 +37,18 @@ export const ConfirmDialog = ({
         <h2 id="confirmar-titulo" className="text-title-md font-headline-lg text-on-surface">
           {titulo}
         </h2>
-        <div className="text-body-sm text-on-surface-variant">{children}</div>
+        <div className="text-body-sm text-on-surface-variant space-y-3">{children}</div>
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" className={estilos.botonSecundario} onClick={alCancelar} disabled={ocupado}>
             Cancelar
           </button>
-          <button type="button" className={estilos.botonPrimario} onClick={alConfirmar} disabled={ocupado}>
-            {ocupado ? 'Enviando…' : textoConfirmar}
+          <button
+            type="button"
+            className={peligroso ? estilos.botonPeligroLleno : estilos.botonPrimario}
+            onClick={alConfirmar}
+            disabled={ocupado}
+          >
+            {ocupado ? textoOcupado : textoConfirmar}
           </button>
         </div>
       </div>

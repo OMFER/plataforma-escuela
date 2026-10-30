@@ -1,31 +1,31 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { claves, useAlumnosMateria, useUsuarios } from '../../hooks/consultas';
+import { claves, useAlumnosGrupo, useUsuarios } from '../../hooks/consultas';
 import { useCasosDeUso } from '../../providers/DependenciasContext';
 import { Cargando } from '../common/Cargando';
 import { MensajeError } from '../common/MensajeError';
 import { estilos } from '../common/estilos';
 
-export const GestionAlumnos = ({ materiaId }: { materiaId: string }) => {
+export const GestionAlumnos = ({ grupoId }: { grupoId: string }) => {
   const { inscribirAlumnos, darDeBajaAlumno } = useCasosDeUso();
   const queryClient = useQueryClient();
-  const inscritos = useAlumnosMateria(materiaId);
+  const inscritos = useAlumnosGrupo(grupoId);
   const alumnos = useUsuarios('alumno');
   const [seleccion, setSeleccion] = useState<string[]>([]);
   const [filtro, setFiltro] = useState('');
 
-  const refrescar = () => queryClient.invalidateQueries({ queryKey: claves.alumnosMateria(materiaId) });
+  const refrescar = () => queryClient.invalidateQueries({ queryKey: claves.alumnosGrupo(grupoId) });
 
   const inscripcion = useMutation({
-    mutationFn: () => inscribirAlumnos.ejecutar(materiaId, seleccion),
+    mutationFn: () => inscribirAlumnos.ejecutar(grupoId, seleccion),
     onSuccess: (lista) => {
-      queryClient.setQueryData(claves.alumnosMateria(materiaId), lista);
+      queryClient.setQueryData(claves.alumnosGrupo(grupoId), lista);
       setSeleccion([]);
     },
   });
 
   const baja = useMutation({
-    mutationFn: (alumnoId: string) => darDeBajaAlumno.ejecutar(materiaId, alumnoId),
+    mutationFn: (alumnoId: string) => darDeBajaAlumno.ejecutar(grupoId, alumnoId),
     onSuccess: () => void refrescar(),
   });
 

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import type { EstadoSemana, Semana } from '../../../domain/entities/Materia';
+import type { EstadoSemana, Semana } from '../../../domain/entities/Grupo';
 import { formatearRangoSemana } from '../../../domain/rules/semanas';
 
 interface WeekSelectorProps {

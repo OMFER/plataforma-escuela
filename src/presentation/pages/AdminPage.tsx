@@ -1,12 +1,14 @@
 import { useState } from 'react';
+import { PanelGrupos } from '../components/admin/PanelGrupos';
 import { PanelMaterias } from '../components/admin/PanelMaterias';
 import { PanelUsuarios } from '../components/admin/PanelUsuarios';
 
-type Pestana = 'usuarios' | 'materias';
+type Pestana = 'usuarios' | 'materias' | 'grupos';
 
 const PESTANAS: { id: Pestana; label: string }[] = [
   { id: 'usuarios', label: 'Usuarios' },
-  { id: 'materias', label: 'Materias e inscripciones' },
+  { id: 'materias', label: 'Materias' },
+  { id: 'grupos', label: 'Grupos e inscripciones' },
 ];
 
 export const AdminPage = () => {
@@ -17,7 +19,7 @@ export const AdminPage = () => {
       <div className="max-w-[1200px] mx-auto p-gutter py-8 space-y-8">
         <section className="space-y-2">
           <h1 className="text-headline-lg-mobile md:text-headline-lg font-headline-lg text-primary">Administración</h1>
-          <p className="text-body-lg text-on-surface-variant">Da de alta cuentas y materias, e inscribe alumnos.</p>
+          <p className="text-body-lg text-on-surface-variant">Da de alta cuentas, materias y grupos del semestre, e inscribe alumnos.</p>
         </section>
 
         <div role="tablist" className="flex border-b border-outline-variant overflow-x-auto">
@@ -39,7 +41,11 @@ export const AdminPage = () => {
           ))}
         </div>
 
-        <div role="tabpanel">{pestana === 'usuarios' ? <PanelUsuarios /> : <PanelMaterias />}</div>
+        <div role="tabpanel">
+          {pestana === 'usuarios' && <PanelUsuarios />}
+          {pestana === 'materias' && <PanelMaterias />}
+          {pestana === 'grupos' && <PanelGrupos />}
+        </div>
       </div>
     </main>
   );
