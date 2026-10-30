@@ -26,4 +26,8 @@ export class HttpContenidoRepository implements ContenidoRepository {
   async actualizar(id: string, cambios: CambiosContenidoSemana): Promise<ContenidoSemana> {
     return aContenido(await this.http.patch<ClaseDto>(`/clases/${encodeURIComponent(id)}`, cambios));
   }
+
+  async eliminar(id: string): Promise<void> {
+    await this.http.delete(`/clases/${encodeURIComponent(id)}`);
+  }
 }

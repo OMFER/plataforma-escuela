@@ -1,14 +1,14 @@
-import type { IntentoAlumno } from '../../domain/entities/Examen';
 import type { ExamenesRepository } from '../../domain/repositories/ExamenesRepository';
 
-export class ObtenerIntentosExamen {
+export class EliminarExamen {
   private readonly examenes: ExamenesRepository;
 
   constructor(examenes: ExamenesRepository) {
     this.examenes = examenes;
   }
 
-  ejecutar(examenId: string): Promise<IntentoAlumno[]> {
-    return this.examenes.obtenerIntentos(examenId);
+  /** Borra también sus intentos. El backend responde 409 si es un Semanal que tiene Reposición. */
+  ejecutar(id: string): Promise<void> {
+    return this.examenes.eliminar(id);
   }
 }

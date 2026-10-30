@@ -3,12 +3,12 @@ import { EstadoVacio } from '../components/common/EstadoVacio';
 import { MensajeError } from '../components/common/MensajeError';
 import { CourseCard } from '../components/dashboard/CourseCard';
 import { APP_TEXTS } from '../constants/textos';
-import { useMisMaterias } from '../hooks/consultas';
+import { useMisGrupos } from '../hooks/consultas';
 import { useUsuarioActual } from '../providers/SesionContext';
 
 export const DashboardPage = () => {
   const usuario = useUsuarioActual();
-  const { data: materias, isPending, error, refetch } = useMisMaterias();
+  const { data: grupos, isPending, error, refetch } = useMisGrupos();
 
   return (
     <main className="min-h-screen">
@@ -21,10 +21,10 @@ export const DashboardPage = () => {
         </section>
 
         <div className="space-y-8">
-          {isPending && <Cargando texto="Cargando tus materias…" />}
+          {isPending && <Cargando texto="Cargando tus grupos…" />}
           {error && <MensajeError error={error} alReintentar={() => void refetch()} />}
-          {materias?.length === 0 && <EstadoVacio icono="school" titulo={APP_TEXTS.dashboard.sinMaterias} />}
-          {materias?.map((materia) => <CourseCard key={materia.id} materia={materia} />)}
+          {grupos?.length === 0 && <EstadoVacio icono="school" titulo={APP_TEXTS.dashboard.sinGrupos} />}
+          {grupos?.map((grupo) => <CourseCard key={grupo.id} grupo={grupo} />)}
         </div>
       </div>
     </main>

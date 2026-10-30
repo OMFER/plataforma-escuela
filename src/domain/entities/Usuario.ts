@@ -6,7 +6,14 @@ export interface Usuario {
   nombre: string;
   correo: string;
   rol: Rol;
-  materias?: string[];
+  /** Ids de los grupos del usuario. */
+  grupos?: string[];
+}
+
+export interface UsuarioResumen {
+  id: string;
+  nombre: string;
+  correo?: string;
 }
 
 export interface Sesion {

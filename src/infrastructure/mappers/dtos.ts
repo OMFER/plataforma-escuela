@@ -8,12 +8,19 @@ export interface UsuarioDto {
   nombre: string;
   correo: string;
   rol: string;
-  materias?: RefDto[];
+  grupos?: RefDto[];
 }
 
 export interface LoginDto {
   access_token: string;
   usuario: UsuarioDto;
+}
+
+export interface MateriaDto {
+  _id: string;
+  nombre: string;
+  descripcion?: string;
+  totalSemanas: number;
 }
 
 export interface SemanaDto {
@@ -23,17 +30,27 @@ export interface SemanaDto {
   estado: string;
 }
 
-export interface MateriaDto {
+export interface GrupoDto {
   _id: string;
   nombre: string;
-  descripcion?: string;
-  grupo?: string;
+  periodo: string;
   aula?: string;
-  maestro?: RefDto | null;
   fechaInicio: string;
-  totalSemanas: number;
+  materia: MateriaDto | string;
+  maestro: RefDto | null;
   semanaActual?: number;
   semanas?: SemanaDto[];
+}
+
+export interface NotaDto {
+  calificacion: number;
+  puntajeMaximo: number;
+}
+
+export interface CalificacionesAlumnoDto {
+  alumno: RefDto;
+  semanas?: { semana: number; semanal: NotaDto | null; reposicion: NotaDto | null; mejor: NotaDto | null }[];
+  final: NotaDto | null;
 }
 
 export interface RecursoDto {
@@ -64,6 +81,21 @@ export interface PreguntaDto {
   enunciado: string;
   opciones: string[];
   respuestaCorrecta?: number;
+  miRespuesta?: number;
+  acierto?: boolean;
+}
+
+/** Plantilla del examen (con respuestas). */
+export interface ExamenDto {
+  _id: string;
+  materia: RefDto;
+  tipo: string;
+  semana?: number | null;
+  titulo: string;
+  descripcion?: string;
+  puntajeMaximo?: number;
+  diasExtra?: number;
+  preguntas?: PreguntaDto[];
 }
 
 export interface ResultadoIntentoDto {
@@ -74,22 +106,40 @@ export interface ResultadoIntentoDto {
   createdAt?: string;
 }
 
-export interface ExamenDto {
+export interface VentanaDto {
+  abre: string;
+  cierra: string;
+  estado: string;
+}
+
+export interface ResumenExamenDto {
   _id: string;
-  materia: RefDto;
-  semana?: number;
+  tipo: string;
+  semana?: number | null;
   titulo: string;
   descripcion?: string;
-  tipo?: string;
-  fechaLimite?: string;
   puntajeMaximo?: number;
-  preguntas?: PreguntaDto[];
   totalPreguntas?: number;
+  ventana: VentanaDto;
   miIntento?: ResultadoIntentoDto | null;
+}
+
+export interface ExamenGrupoDto extends ResumenExamenDto {
+  preguntas?: PreguntaDto[];
+}
+
+export interface ExamenesSemanaDto {
+  semanal: ResumenExamenDto | null;
+  reposicion: ResumenExamenDto | null;
+}
+
+export interface ResultadoRevisionDto extends ResultadoIntentoDto {
+  revision?: PreguntaDto[];
 }
 
 export interface IntentoDto extends ResultadoIntentoDto {
   _id: string;
+  examen: RefDto;
   alumno: RefDto;
   respuestas: number[];
 }

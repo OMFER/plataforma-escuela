@@ -1,14 +1,14 @@
-import type { Materia } from '../../domain/entities/Materia';
 import type { MateriasRepository } from '../../domain/repositories/MateriasRepository';
 
-export class ObtenerMateria {
+export class EliminarMateria {
   private readonly materias: MateriasRepository;
 
   constructor(materias: MateriasRepository) {
     this.materias = materias;
   }
 
-  ejecutar(id: string): Promise<Materia | null> {
-    return this.materias.obtenerPorId(id);
+  /** El backend responde 409 si la materia todavía tiene grupos. */
+  ejecutar(id: string): Promise<void> {
+    return this.materias.eliminar(id);
   }
 }

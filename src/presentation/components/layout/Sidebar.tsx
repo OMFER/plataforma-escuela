@@ -23,7 +23,7 @@ export const Sidebar = () => {
       <nav className="flex-1 space-y-1">
         {navegacionPorRol(usuario.rol).map((item) => {
           const isActive =
-            item.path === '/' ? location.pathname === '/' || location.pathname.startsWith('/materias') : location.pathname.startsWith(item.path);
+            item.path === '/' ? location.pathname === '/' || location.pathname.startsWith('/grupos') : location.pathname.startsWith(item.path);
           return (
             <Link
               key={item.path}

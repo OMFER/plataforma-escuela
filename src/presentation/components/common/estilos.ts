@@ -7,6 +7,10 @@ export const estilos = {
     'inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary px-6 py-2.5 rounded-lg font-bold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed',
   botonSecundario:
     'inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-bold border border-outline-variant text-primary hover:bg-surface-variant transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
+  botonPeligro:
+    'inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-bold border border-error/40 text-error hover:bg-error-container/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
+  botonPeligroLleno:
+    'inline-flex items-center justify-center gap-2 bg-error text-on-primary px-6 py-2.5 rounded-lg font-bold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed',
   botonIcono:
     'p-2 rounded-lg text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
   enlaceVolver: 'text-primary text-body-sm flex items-center gap-1 hover:underline w-fit',

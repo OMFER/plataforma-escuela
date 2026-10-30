@@ -1,41 +1,19 @@
-export type EstadoSemana = 'completada' | 'actual' | 'futura';
-
-export interface Semana {
-  numero: number;
-  inicio: string;
-  fin: string;
-  estado: EstadoSemana;
-}
-
-export interface MaestroResumen {
-  id: string;
-  nombre: string;
-  correo?: string;
-}
-
+/** Materia permanente: su contenido y exámenes se reutilizan cada semestre. */
 export interface Materia {
   id: string;
   nombre: string;
   descripcion?: string;
-  grupo?: string;
-  aula?: string;
-  maestro: MaestroResumen;
-  fechaInicio: string;
   totalSemanas: number;
-  /** 0 = no ha empezado; totalSemanas + 1 = terminó. */
-  semanaActual: number;
-  semanas: Semana[];
 }
 
 export interface NuevaMateria {
   nombre: string;
   descripcion?: string;
-  grupo?: string;
-  aula?: string;
-  maestroId: string;
-  /** Formato YYYY-MM-DD */
-  fechaInicio: string;
   totalSemanas?: number;
 }
 
+export type CambiosMateria = Partial<NuevaMateria>;
+
 export const TOTAL_SEMANAS_POR_DEFECTO = 16;
+export const MIN_SEMANAS = 1;
+export const MAX_SEMANAS = 52;

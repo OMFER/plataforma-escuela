@@ -1,21 +1,17 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { FormProvider, useFieldArray, useForm } from 'react-hook-form';
-import { TIPOS_EXAMEN } from '../../../domain/entities/Examen';
+import { FormProvider, useFieldArray, useForm, useWatch } from 'react-hook-form';
+import { DIAS_EXTRA_MAX, TIPOS_EXAMEN } from '../../../domain/entities/Examen';
+import { usaSemana } from '../../../domain/rules/examen';
+import { ETIQUETAS_TIPO_EXAMEN } from '../../constants/textos';
 import { Campo } from '../common/Campo';
 import { MensajeError } from '../common/MensajeError';
 import { estilos } from '../common/estilos';
 import { PreguntaEditor } from './PreguntaEditor';
-import { esquemaExamen, preguntaVacia, type FormularioExamenValores } from './esquemaExamen';
-
-const ETIQUETAS_TIPO: Record<(typeof TIPOS_EXAMEN)[number], string> = {
-  Semanal: 'Semanal',
-  Parcial: 'Parcial',
-  Final: 'Final',
-  PuntoExtra: 'Punto extra',
-};
+import { AYUDA_VENTANA, esquemaExamen, preguntaVacia, type FormularioExamenValores } from './esquemaExamen';
 
 interface FormularioExamenProps {
   valoresIniciales: FormularioExamenValores;
+  totalSemanas: number;
   esNuevo: boolean;
   tieneIntentos: boolean;
   error: unknown;
@@ -26,6 +22,7 @@ interface FormularioExamenProps {
 
 export const FormularioExamen = ({
   valoresIniciales,
+  totalSemanas,
   esNuevo,
   tieneIntentos,
   error,
@@ -44,29 +41,61 @@ export const FormularioExamen = ({
     formState: { errors },
   } = metodos;
   const preguntas = useFieldArray({ control, name: 'preguntas' });
+  const tipo = useWatch({ control, name: 'tipo' });
+  const semanas = Array.from({ length: Math.max(totalSemanas, valoresIniciales.semana) }, (_, i) => i + 1);
 
   return (
     <FormProvider {...metodos}>
       <form onSubmit={handleSubmit(alGuardar)} noValidate className="space-y-8">
         <section className={`${estilos.tarjeta} space-y-5`}>
+          {esNuevo ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Campo etiqueta="Tipo de examen" htmlFor="tipo">
+                <select id="tipo" className={estilos.input} {...register('tipo')}>
+                  {TIPOS_EXAMEN.map((t) => (
+                    <option key={t} value={t}>
+                      {ETIQUETAS_TIPO_EXAMEN[t]}
+                    </option>
+                  ))}
+                </select>
+              </Campo>
+              {usaSemana(tipo) && (
+                <Campo etiqueta="Semana" htmlFor="semana" error={errors.semana?.message}>
+                  <select id="semana" className={estilos.input} {...register('semana', { valueAsNumber: true })}>
+                    {semanas.map((n) => (
+                      <option key={n} value={n}>
+                        Semana {n}
+                      </option>
+                    ))}
+                  </select>
+                </Campo>
+              )}
+            </div>
+          ) : (
+            <p className="text-body-sm text-on-surface-variant">
+              <span className="font-bold text-on-surface">
+                {ETIQUETAS_TIPO_EXAMEN[tipo]}
+                {usaSemana(tipo) ? ` · Semana ${valoresIniciales.semana}` : ''}
+              </span>{' '}
+              · El tipo y la semana no se pueden cambiar después de crear el examen.
+            </p>
+          )}
           <Campo etiqueta="Título" htmlFor="titulo" error={errors.titulo?.message}>
             <input id="titulo" className={estilos.input} {...register('titulo')} />
           </Campo>
           <Campo etiqueta="Descripción (opcional)" htmlFor="descripcion">
             <textarea id="descripcion" rows={3} className={estilos.input} {...register('descripcion')} />
           </Campo>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Campo etiqueta="Tipo" htmlFor="tipo">
-              <select id="tipo" className={estilos.input} {...register('tipo')}>
-                {TIPOS_EXAMEN.map((t) => (
-                  <option key={t} value={t}>
-                    {ETIQUETAS_TIPO[t]}
-                  </option>
-                ))}
-              </select>
-            </Campo>
-            <Campo etiqueta="Fecha límite (opcional)" htmlFor="fechaLimite">
-              <input id="fechaLimite" type="datetime-local" className={estilos.input} {...register('fechaLimite')} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Campo etiqueta="Días extra" htmlFor="diasExtra" error={errors.diasExtra?.message} ayuda={AYUDA_VENTANA[tipo]}>
+              <input
+                id="diasExtra"
+                type="number"
+                min={0}
+                max={DIAS_EXTRA_MAX}
+                className={estilos.input}
+                {...register('diasExtra', { valueAsNumber: true })}
+              />
             </Campo>
             <Campo etiqueta="Puntaje máximo" htmlFor="puntajeMaximo" error={errors.puntajeMaximo?.message}>
               <input
@@ -94,7 +123,7 @@ export const FormularioExamen = ({
           {tieneIntentos && (
             <p className="bg-secondary-container/30 border-l-4 border-primary p-3 rounded-r-lg text-body-sm">
               Este examen ya tiene respuestas de alumnos: si cambias las preguntas, el servidor rechazará el cambio.
-              Puedes seguir editando título, descripción, fecha límite y puntaje.
+              Puedes seguir editando título, descripción, días extra y puntaje.
             </p>
           )}
           {errors.preguntas?.root?.message && <p className="text-[12px] text-error">{errors.preguntas.root.message}</p>}

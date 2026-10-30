@@ -5,4 +5,5 @@ export interface ContenidoRepository {
   obtenerPorSemana(materiaId: string, semana: number): Promise<ContenidoSemana | null>;
   crear(datos: NuevoContenidoSemana): Promise<ContenidoSemana>;
   actualizar(id: string, cambios: CambiosContenidoSemana): Promise<ContenidoSemana>;
+  eliminar(id: string): Promise<void>;
 }
