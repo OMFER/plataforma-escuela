@@ -104,6 +104,7 @@ export const FormularioExamen = ({
                 min={1}
                 step="any"
                 className={estilos.input}
+                readOnly={tieneIntentos}
                 {...register('puntajeMaximo', { valueAsNumber: true })}
               />
             </Campo>
@@ -122,8 +123,8 @@ export const FormularioExamen = ({
           </div>
           {tieneIntentos && (
             <p className="bg-secondary-container/30 border-l-4 border-primary p-3 rounded-r-lg text-body-sm">
-              Este examen ya tiene respuestas de alumnos: si cambias las preguntas, el servidor rechazará el cambio.
-              Puedes seguir editando título, descripción, días extra y puntaje.
+              Este examen ya tiene respuestas de alumnos (en este u otro grupo de la materia): las preguntas y el puntaje
+              máximo ya no se pueden cambiar porque alterarían sus calificaciones. Puedes editar título, descripción y días extra.
             </p>
           )}
           {errors.preguntas?.root?.message && <p className="text-[12px] text-error">{errors.preguntas.root.message}</p>}

@@ -147,7 +147,7 @@ export const EditorExamenPage = () => {
             valoresIniciales={valoresInicialesExamen(examen.data ?? null, nuevo)}
             totalSemanas={grupo.data.materia.totalSemanas}
             esNuevo={esNuevo}
-            tieneIntentos={(intentos.data?.length ?? 0) > 0}
+            tieneIntentos={examen.data?.tieneRespuestas ?? (intentos.data?.length ?? 0) > 0}
             error={guardado.error}
             guardando={guardado.isPending}
             alGuardar={(valores) => guardado.mutate(valores)}

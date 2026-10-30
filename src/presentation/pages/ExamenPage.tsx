@@ -30,7 +30,7 @@ const ContenidoExamen = ({ grupoId, examen, alRecargar }: ContenidoExamenProps) 
     return (
       <>
         <ResultadoExamen resultado={resultadoNuevo} puntajeMaximo={examen.puntajeMaximo} />
-        <RevisionExamen preguntas={resultadoNuevo.revision} />
+        <RevisionExamen preguntas={resultadoNuevo.revision} cierra={resultadoNuevo.ventana?.cierra ?? examen.ventana.cierra} />
       </>
     );
   }
@@ -41,7 +41,7 @@ const ContenidoExamen = ({ grupoId, examen, alRecargar }: ContenidoExamenProps) 
       <>
         <ResultadoExamen resultado={examen.miIntento} puntajeMaximo={examen.puntajeMaximo} />
         {revision.length > 0 ? (
-          <RevisionExamen preguntas={revision} />
+          <RevisionExamen preguntas={revision} cierra={examen.ventana.cierra} />
         ) : (
           <p className="text-body-sm text-on-surface-variant">La revisión de este examen no está disponible por ahora.</p>
         )}

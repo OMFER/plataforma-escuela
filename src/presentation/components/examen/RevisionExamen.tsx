@@ -1,4 +1,5 @@
 import type { PreguntaRevisada } from '../../../domain/entities/Examen';
+import { formatearFechaHora } from '../../utils/fechas';
 
 const estiloOpcion = (esCorrecta: boolean, esElegida: boolean): string => {
   if (esCorrecta) return 'border-primary bg-secondary-container/40';
@@ -20,9 +21,19 @@ const OpcionRevisada = ({ texto, esCorrecta, esElegida }: { texto: string; esCor
   </li>
 );
 
-/** Revisión pregunta por pregunta: lo que respondió el alumno, si acertó y cuál era la respuesta correcta. */
-export const RevisionExamen = ({ preguntas }: { preguntas: PreguntaRevisada[] }) => {
+interface RevisionExamenProps {
+  preguntas: PreguntaRevisada[];
+  /** Cuándo cierra el examen en el grupo: a partir de ahí se ven las respuestas correctas. */
+  cierra?: string;
+}
+
+/**
+ * Revisión pregunta por pregunta: lo que respondió el alumno y si acertó.
+ * La respuesta correcta solo aparece cuando el examen ya cerró para todo el grupo.
+ */
+export const RevisionExamen = ({ preguntas, cierra }: RevisionExamenProps) => {
   const aciertos = preguntas.filter((p) => p.acierto).length;
+  const sinRespuestasCorrectas = preguntas.some((p) => p.respuestaCorrecta === undefined);
   return (
     <section className="space-y-4" aria-labelledby="titulo-revision">
       <div className="flex flex-wrap items-end justify-between gap-2">
@@ -33,6 +44,14 @@ export const RevisionExamen = ({ preguntas }: { preguntas: PreguntaRevisada[] })
           {aciertos} de {preguntas.length} correctas
         </p>
       </div>
+      {sinRespuestasCorrectas && (
+        <p role="note" className="flex items-center gap-2 text-body-sm text-on-surface-variant bg-surface-container-low p-3 rounded-lg">
+          <span className="material-symbols-outlined text-[18px]" aria-hidden="true">schedule</span>
+          {cierra
+            ? `Las respuestas correctas se mostrarán cuando cierre el examen, el ${formatearFechaHora(cierra)}.`
+            : 'Las respuestas correctas se mostrarán cuando cierre el examen.'}
+        </p>
+      )}
       <ol className="space-y-4">
         {preguntas.map((p, i) => (
           <li key={p.id}>
@@ -54,7 +73,7 @@ export const RevisionExamen = ({ preguntas }: { preguntas: PreguntaRevisada[] })
               </div>
               <ul className="space-y-2">
                 {p.opciones.map((texto, j) => (
-                  <OpcionRevisada key={`${p.id}-${j}`} texto={texto} esCorrecta={j === p.respuestaCorrecta} esElegida={j === p.miRespuesta} />
+                  <OpcionRevisada key={`${p.id}-${j}`} texto={texto} esCorrecta={p.respuestaCorrecta !== undefined && j === p.respuestaCorrecta} esElegida={j === p.miRespuesta} />
                 ))}
               </ul>
               {p.miRespuesta < 0 && <p className="text-body-sm text-on-surface-variant">No respondiste esta pregunta.</p>}
