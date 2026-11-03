@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { preguntasEjemplo, resumenExamen, sesionAlumno, ventanas } from '../test/datos';
 import { renderApp } from '../test/renderApp';
 import { RevisionExamen } from './components/examen/RevisionExamen';
@@ -50,9 +50,12 @@ describe('pantalla de examen del alumno', () => {
     await usuario.click(enviar);
     const dialogo = screen.getByRole('dialog', { name: '¿Enviar tus respuestas?' });
     expect(dialogo).toHaveTextContent('Solo tienes un intento');
+    vi.mocked(window.scrollTo).mockClear();
     await usuario.click(within(dialogo).getByRole('button', { name: 'Sí, enviar' }));
 
     expect(await screen.findByText('Calificación: 5 / 10')).toBeInTheDocument();
+    // La revisión se muestra desde arriba, no desde donde estaba el botón de enviar.
+    expect(window.scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }));
     expect(screen.getByText('Aciertos: 1 de 2')).toBeInTheDocument();
     expect(repos.examenesGrupo.respuestasRecibidas).toEqual([[1, 2]]);
     expect(screen.queryByRole('button', { name: /Enviar respuestas/ })).not.toBeInTheDocument();

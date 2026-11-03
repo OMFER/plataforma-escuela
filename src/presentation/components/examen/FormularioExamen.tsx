@@ -15,6 +15,8 @@ interface FormularioExamenProps {
   esNuevo: boolean;
   tieneIntentos: boolean;
   error: unknown;
+  /** Confirmación del último guardado; se muestra junto al botón para que se vea al hacer clic. */
+  aviso?: string | null;
   guardando: boolean;
   alGuardar: (valores: FormularioExamenValores) => void;
   alCancelar: () => void;
@@ -26,6 +28,7 @@ export const FormularioExamen = ({
   esNuevo,
   tieneIntentos,
   error,
+  aviso = null,
   guardando,
   alGuardar,
   alCancelar,
@@ -140,6 +143,12 @@ export const FormularioExamen = ({
         </section>
 
         {error !== null && error !== undefined && <MensajeError error={error} />}
+        {aviso && !guardando && (
+          <p role="status" className="flex items-center gap-2 bg-secondary-container/30 border-l-4 border-primary p-3 rounded-r-lg text-body-sm">
+            <span className="material-symbols-outlined text-primary text-[20px]" aria-hidden="true">check_circle</span>
+            {aviso}
+          </p>
+        )}
 
         <div className="flex justify-end gap-3">
           <button type="button" className={estilos.botonSecundario} onClick={alCancelar} disabled={guardando}>

@@ -3,11 +3,17 @@ import type { Rol } from '../../domain/entities/Usuario';
 
 export const APP_TEXTS = {
   brand: {
-    name: 'EduFlow',
+    name: 'CES Ipalnemohuani',
     subtitle: 'Portal Académico',
   },
   nav: {
     logout: 'Cerrar sesión',
+    abrirMenu: 'Mostrar menú',
+    cerrarMenu: 'Ocultar menú',
+    volverInicio: 'Volver al inicio',
+    volverSemana: (semana: number) => `Volver a la semana ${semana}`,
+    irInicio: 'Ir al inicio',
+    opcionesCuenta: 'opciones de la cuenta',
   },
   dashboard: {
     greeting: '¡Hola',

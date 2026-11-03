@@ -1,58 +1,65 @@
 import { Link, useLocation } from 'react-router-dom';
-import { APP_TEXTS } from '../../constants/textos';
-import { navegacionPorRol } from '../../constants/navegacion';
-import { useSesion, useUsuarioActual } from '../../providers/SesionContext';
+import { ID_MENU_LATERAL, navegacionPorRol } from '../../constants/navegacion';
+import { useUsuarioActual } from '../../providers/SesionContext';
+import { BotonMenuLateral } from './BotonMenuLateral';
+import { LogoEscuela } from './LogoEscuela';
 
-export const Sidebar = () => {
+interface SidebarProps {
+  abierto: boolean;
+  alCerrar: () => void;
+  alNavegar: () => void;
+}
+
+export const Sidebar = ({ abierto, alCerrar, alNavegar }: SidebarProps) => {
   const location = useLocation();
   const usuario = useUsuarioActual();
-  const { cerrarSesion } = useSesion();
 
   return (
-    <aside className="hidden md:flex flex-col h-full p-gutter fixed left-0 top-0 z-40 w-64 bg-surface-container border-r border-outline-variant">
-      <div className="mb-8 flex items-center gap-3 px-2">
-        <div className="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center">
-          <span className="material-symbols-outlined text-on-primary" style={{ fontVariationSettings: "'FILL' 1" }}>school</span>
+    <>
+      {/* En celular el menú flota: un fondo oscuro permite cerrarlo tocando fuera. */}
+      {abierto && <div aria-hidden="true" onClick={alCerrar} className="md:hidden fixed inset-0 z-40 bg-black/40" />}
+      <aside
+        id={ID_MENU_LATERAL}
+        className={`${abierto ? 'flex' : 'hidden'} flex-col h-full p-gutter fixed left-0 top-0 z-50 md:z-40 w-64 bg-surface-container border-r border-outline-variant shadow-lg md:shadow-none`}
+      >
+        <div className="mb-8 flex items-center justify-between gap-2">
+          <LogoEscuela conSubtitulo onClick={alNavegar} className="px-2" />
+          <BotonMenuLateral menuAbierto alAlternar={alCerrar} />
         </div>
-        <div>
-          <h1 className="text-title-md font-headline-lg font-bold text-primary">{APP_TEXTS.brand.name}</h1>
-          <p className="text-label-caps font-label-caps text-on-surface-variant">{APP_TEXTS.brand.subtitle}</p>
-        </div>
-      </div>
 
-      <nav className="flex-1 space-y-1">
-        {navegacionPorRol(usuario.rol).map((item) => {
-          const isActive =
-            item.path === '/' ? location.pathname === '/' || location.pathname.startsWith('/grupos') : location.pathname.startsWith(item.path);
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              aria-current={isActive ? 'page' : undefined}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${isActive
-                  ? 'text-primary font-bold bg-secondary-container active:scale-[0.98]'
-                  : 'text-on-surface-variant hover:bg-surface-variant'
+        <nav className="flex-1 space-y-1">
+          {navegacionPorRol(usuario.rol).map((item) => {
+            const isActive =
+              item.path === '/'
+                ? location.pathname === '/' || location.pathname.startsWith('/grupos')
+                : location.pathname.startsWith(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={alNavegar}
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                  isActive
+                    ? 'text-primary font-bold bg-secondary-container active:scale-[0.98]'
+                    : 'text-on-surface-variant hover:bg-surface-variant'
                 }`}
-            >
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}>
-                {item.icon}
-              </span>
-              <span className="text-label-caps font-label-caps">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+              >
+                <span
+                  className="material-symbols-outlined"
+                  style={{
+                    fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0",
+                  }}
+                >
+                  {item.icon}
+                </span>
+                <span className="text-label-caps font-label-caps">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
 
-      <div className="mt-auto space-y-1 pt-4 border-t border-outline-variant">
-        <button
-          type="button"
-          onClick={cerrarSesion}
-          className="w-full flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-variant rounded-lg"
-        >
-          <span className="material-symbols-outlined">logout</span>
-          <span className="text-label-caps font-label-caps">{APP_TEXTS.nav.logout}</span>
-        </button>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 };

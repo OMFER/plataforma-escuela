@@ -10,20 +10,16 @@ interface EncabezadoSemanaProps {
   grupoId: string;
   semana: number;
   grupo?: Grupo | null;
-  volverA?: { ruta: string; texto: string };
+  /** Muestra los botones Anterior/Siguiente para cambiar de semana. */
+  conNavegacion?: boolean;
 }
 
-export const EncabezadoSemana = ({ grupoId, semana, grupo, volverA }: EncabezadoSemanaProps) => {
+export const EncabezadoSemana = ({ grupoId, semana, grupo, conNavegacion = true }: EncabezadoSemanaProps) => {
   const info = grupo ? buscarSemana(grupo.semanas, semana) : undefined;
   const total = grupo?.materia.totalSemanas;
-  const destino = volverA ?? { ruta: rutas.inicio, texto: 'Volver al inicio' };
 
   return (
     <section className="space-y-4">
-      <Link to={destino.ruta} className={estilos.enlaceVolver}>
-        <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-        {destino.texto}
-      </Link>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="space-y-1">
           {grupo && (
@@ -46,7 +42,7 @@ export const EncabezadoSemana = ({ grupoId, semana, grupo, volverA }: Encabezado
             </p>
           )}
         </div>
-        {!volverA && total ? (
+        {conNavegacion && total ? (
           <nav className="flex gap-2" aria-label="Cambiar de semana">
             {semana > 1 && (
               <Link to={rutas.semana(grupoId, semana - 1)} className={estilos.botonSecundario}>

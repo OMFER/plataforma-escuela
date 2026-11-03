@@ -14,3 +14,6 @@ const NAVEGACION: Record<Rol, ElementoNavegacion[]> = {
 };
 
 export const navegacionPorRol = (rol: Rol): ElementoNavegacion[] => NAVEGACION[rol];
+
+/** id del menú lateral, para que el botón de hamburguesa lo referencie (aria-controls). */
+export const ID_MENU_LATERAL = 'menu-lateral';
