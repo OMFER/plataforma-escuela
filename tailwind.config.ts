@@ -16,6 +16,8 @@ export default {
         "on-primary-fixed": "#002020",
         "secondary-container": "#9cf1f1",
         "on-secondary-container": "#007070",
+        "exito": "#2e9e4a",
+        "exito-container": "#c9f0d0",
         "error": "#ba1a1a",
         "error-container": "#ffdad6",
         "background": "#f8f9fa",
