@@ -1,7 +1,7 @@
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ErrorAplicacion } from '../domain/errors/ErrorAplicacion';
 import { grupoEjemplo, usuarioAlumno } from '../test/fakes';
 import { preguntasEjemplo, resumenExamen, sesionAlumno, sesionMaestro, ventanas } from '../test/datos';
@@ -52,6 +52,21 @@ describe('autenticación y rutas', () => {
     expect(screen.getByText('Grupo 05 | 2026-B | Aula 106')).toBeInTheDocument();
     expect(screen.getByText('Semana 2 de 3')).toBeInTheDocument();
     expect(screen.getByText('Alumno')).toBeInTheDocument();
+  });
+
+  it('el botón ver/ocultar alterna la visibilidad de la contraseña', async () => {
+    const usuario = userEvent.setup();
+    renderApp('/login');
+    const campo = await screen.findByLabelText('Contraseña');
+    await usuario.type(campo, 'secreto');
+    expect(campo).toHaveAttribute('type', 'password');
+
+    await usuario.click(screen.getByRole('button', { name: 'Ver contraseña' }));
+    expect(campo).toHaveAttribute('type', 'text');
+    expect(campo).toHaveValue('secreto');
+
+    await usuario.click(screen.getByRole('button', { name: 'Ocultar contraseña' }));
+    expect(campo).toHaveAttribute('type', 'password');
   });
 
   it('un 401 de la API cierra la sesión y vuelve al login', async () => {
@@ -122,6 +137,133 @@ describe('dashboard', () => {
       'href',
       '/grupos/g1/examenes/nuevo?tipo=Final',
     );
+  });
+});
+
+describe('home', () => {
+  it('junto a cada materia el alumno ve la calificación del semestre que calcula el servidor', async () => {
+    renderApp('/', {
+      sesion: sesionAlumno,
+      preparar: (r) => {
+        r.grupos.lista.push(grupoEjemplo);
+        r.grupos.calificaciones.g1 = [{ alumno: usuarioAlumno, semanas: [], final: null, semestre: 0.44 }];
+      },
+    });
+    expect(await screen.findByLabelText('Calificación acumulada: 0.4 de 10')).toBeInTheDocument();
+  });
+
+  it('el maestro no ve calificación junto a la materia', async () => {
+    renderApp('/', {
+      sesion: sesionMaestro,
+      preparar: (r) => {
+        r.grupos.lista.push(grupoEjemplo);
+        r.grupos.calificaciones.g1 = [{ alumno: usuarioAlumno, semanas: [], final: null, semestre: 5 }];
+      },
+    });
+    expect(await screen.findByText(grupoEjemplo.materia.nombre)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Calificación acumulada/)).not.toBeInTheDocument();
+  });
+});
+
+describe('layout', () => {
+  it('en la semana el header muestra la materia y el regreso al inicio', async () => {
+    renderApp('/grupos/g1/semanas/2', { sesion: sesionAlumno, preparar: (r) => r.grupos.lista.push(grupoEjemplo) });
+    const header = await screen.findByRole('banner');
+    expect(await within(header).findByText(grupoEjemplo.materia.nombre)).toBeInTheDocument();
+    expect(await within(header).findByRole('link', { name: 'Volver al inicio' })).toHaveAttribute('href', '/');
+    expect(screen.getAllByRole('link', { name: 'Volver al inicio' })).toHaveLength(1);
+  });
+
+  it('en el examen el botón volver va en el header (y no dentro de la pantalla)', async () => {
+    renderApp('/grupos/g1/examenes/e1', {
+      sesion: sesionAlumno,
+      preparar: (r) => {
+        r.grupos.lista.push(grupoEjemplo);
+        r.examenesGrupo.lista.push({ grupoId: 'g1', resumen: resumenExamen(), preguntas: preguntasEjemplo });
+      },
+    });
+    const header = await screen.findByRole('banner');
+    expect(await within(header).findByRole('link', { name: 'Volver a la semana 2' })).toHaveAttribute('href', '/grupos/g1/semanas/2');
+    expect(within(screen.getByRole('main')).queryByRole('link', { name: /Volver/ })).not.toBeInTheDocument();
+  });
+
+  it('en calificaciones el botón volver va en el header', async () => {
+    renderApp('/grupos/g1/calificaciones', { sesion: sesionAlumno, preparar: (r) => r.grupos.lista.push(grupoEjemplo) });
+    const header = await screen.findByRole('banner');
+    expect(await within(header).findByRole('link', { name: 'Volver al inicio' })).toHaveAttribute('href', '/');
+    expect(within(screen.getByRole('main')).queryByRole('link', { name: /Volver/ })).not.toBeInTheDocument();
+  });
+
+  it('fuera de un grupo el header no muestra materia ni regreso', async () => {
+    renderApp('/', { sesion: sesionAlumno, preparar: (r) => r.grupos.lista.push(grupoEjemplo) });
+    const header = await screen.findByRole('banner');
+    expect(within(header).queryByRole('link', { name: 'Volver al inicio' })).not.toBeInTheDocument();
+    expect(within(header).queryByText(grupoEjemplo.materia.nombre)).not.toBeInTheDocument();
+  });
+
+  it('al cambiar de pantalla la página empieza desde arriba', async () => {
+    const usuario = userEvent.setup();
+    renderApp('/grupos/g1/semanas/2', { sesion: sesionAlumno, preparar: (r) => r.grupos.lista.push(grupoEjemplo) });
+    const header = await screen.findByRole('banner');
+    vi.mocked(window.scrollTo).mockClear();
+    await usuario.click(await within(header).findByRole('link', { name: 'Volver al inicio' }));
+    expect(await screen.findByRole('heading', { name: /¡Hola/ })).toBeInTheDocument();
+    expect(window.scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }));
+  });
+
+  it('el botón de hamburguesa vive en el menú lateral abierto y en el header cuando está oculto', async () => {
+    const usuario = userEvent.setup();
+    renderApp('/', { sesion: sesionAlumno });
+    const menu = () => document.getElementById('menu-lateral')!;
+    const header = await screen.findByRole('banner');
+
+    const ocultar = await within(menu()).findByRole('button', { name: 'Ocultar menú' });
+    expect(ocultar).toHaveAttribute('aria-expanded', 'true');
+    expect(within(header).queryByRole('button', { name: /menú/ })).not.toBeInTheDocument();
+    expect(menu()).toHaveClass('flex');
+
+    await usuario.click(ocultar);
+    expect(menu()).toHaveClass('hidden');
+    const mostrar = within(header).getByRole('button', { name: 'Mostrar menú' });
+    expect(mostrar).toHaveAttribute('aria-expanded', 'false');
+
+    await usuario.click(mostrar);
+    expect(menu()).toHaveClass('flex');
+  });
+
+  it('el logo va al inicio y aparece en el header solo con el menú oculto', async () => {
+    const usuario = userEvent.setup();
+    renderApp('/grupos/g1/semanas/2', { sesion: sesionAlumno, preparar: (r) => r.grupos.lista.push(grupoEjemplo) });
+    const header = await screen.findByRole('banner');
+    const menu = document.getElementById('menu-lateral')!;
+
+    expect(within(menu).getByRole('link', { name: /CES Ipalnemohuani/ })).toHaveAttribute('href', '/');
+    expect(within(header).queryByRole('link', { name: /CES Ipalnemohuani/ })).not.toBeInTheDocument();
+
+    await usuario.click(within(menu).getByRole('button', { name: 'Ocultar menú' }));
+    const logo = within(header).getByRole('link', { name: /CES Ipalnemohuani/ });
+    expect(logo).toHaveAttribute('href', '/');
+    await usuario.click(logo);
+    expect(await screen.findByRole('heading', { name: /¡Hola/ })).toBeInTheDocument();
+  });
+
+  it('cerrar sesión está en el menú desplegable del nombre del usuario', async () => {
+    const usuario = userEvent.setup();
+    renderApp('/', { sesion: sesionAlumno });
+    const header = await screen.findByRole('banner');
+    expect(screen.queryByRole('menuitem', { name: 'Cerrar sesión' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cerrar sesión' })).not.toBeInTheDocument();
+
+    const botonUsuario = within(header).getByRole('button', { name: /opciones de la cuenta/ });
+    await usuario.click(botonUsuario);
+    expect(botonUsuario).toHaveAttribute('aria-expanded', 'true');
+
+    await usuario.keyboard('{Escape}');
+    expect(screen.queryByRole('menuitem', { name: 'Cerrar sesión' })).not.toBeInTheDocument();
+
+    await usuario.click(botonUsuario);
+    await usuario.click(screen.getByRole('menuitem', { name: 'Cerrar sesión' }));
+    expect(await screen.findByRole('heading', { name: 'Inicia sesión' })).toBeInTheDocument();
   });
 });
 
@@ -323,6 +465,14 @@ describe('editor de examen (maestro)', () => {
     expect(repos.examenes.creados[0]).toMatchObject({ materiaId: 'm1', tipo: 'Final', titulo: 'Examen final', diasExtra: 3 });
     expect(repos.examenes.creados[0]).not.toHaveProperty('semana');
     expect(screen.getByRole('heading', { name: 'Editar examen final' })).toBeInTheDocument();
+
+    // Al guardar cambios, la confirmación aparece junto al botón (dentro del formulario), no arriba de la página.
+    await usuario.type(screen.getByLabelText('Título'), ' 2026');
+    const guardar = screen.getByRole('button', { name: /Guardar cambios/ });
+    await usuario.click(guardar);
+    const aviso = await screen.findByRole('status');
+    expect(aviso).toHaveTextContent('Examen guardado correctamente.');
+    expect(guardar.closest('form')).toContainElement(aviso);
   });
 
   it('valida los días extra (0 a 30)', async () => {

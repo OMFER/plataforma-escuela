@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import type { ExamenGrupo, ResultadoConRevision } from '../../domain/entities/Examen';
 import { revisionDe } from '../../domain/rules/examen';
 import { estadoDeVentana } from '../../domain/rules/ventana';
@@ -10,10 +10,12 @@ import { estilos } from '../components/common/estilos';
 import { FormularioRespuestas } from '../components/examen/FormularioRespuestas';
 import { ResultadoExamen } from '../components/examen/ResultadoExamen';
 import { RevisionExamen } from '../components/examen/RevisionExamen';
-import { NOMBRE_TIPO_EXAMEN } from '../constants/textos';
+import { APP_TEXTS, NOMBRE_TIPO_EXAMEN } from '../constants/textos';
+import { useBotonVolver } from '../providers/BotonVolverContext';
 import { useExamenGrupo } from '../hooks/consultas';
 import { rutas } from '../routes/rutas';
 import { formatearFechaHora } from '../utils/fechas';
+import { irArribaDeLaPagina } from '../utils/scroll';
 import { describirVentana } from '../utils/ventana';
 
 interface ContenidoExamenProps {
@@ -30,7 +32,7 @@ const ContenidoExamen = ({ grupoId, examen, alRecargar }: ContenidoExamenProps) 
     return (
       <>
         <ResultadoExamen resultado={resultadoNuevo} puntajeMaximo={examen.puntajeMaximo} />
-        <RevisionExamen preguntas={resultadoNuevo.revision} />
+        <RevisionExamen preguntas={resultadoNuevo.revision} cierra={resultadoNuevo.ventana?.cierra ?? examen.ventana.cierra} />
       </>
     );
   }
@@ -41,7 +43,7 @@ const ContenidoExamen = ({ grupoId, examen, alRecargar }: ContenidoExamenProps) 
       <>
         <ResultadoExamen resultado={examen.miIntento} puntajeMaximo={examen.puntajeMaximo} />
         {revision.length > 0 ? (
-          <RevisionExamen preguntas={revision} />
+          <RevisionExamen preguntas={revision} cierra={examen.ventana.cierra} />
         ) : (
           <p className="text-body-sm text-on-surface-variant">La revisión de este examen no está disponible por ahora.</p>
         )}
@@ -77,23 +79,32 @@ const ContenidoExamen = ({ grupoId, examen, alRecargar }: ContenidoExamenProps) 
       </EstadoVacio>
     );
   }
-  return <FormularioRespuestas grupoId={grupoId} examen={examen} alTerminar={setResultadoNuevo} />;
+  return (
+    <FormularioRespuestas
+      grupoId={grupoId}
+      examen={examen}
+      alTerminar={(resultado) => {
+        setResultadoNuevo(resultado);
+        // Tras enviar, la calificación y la revisión se leen desde arriba.
+        irArribaDeLaPagina();
+      }}
+    />
+  );
 };
 
 export const ExamenPage = () => {
   const { grupoId = '', examenId = '' } = useParams<{ grupoId: string; examenId: string }>();
   const { data: examen, isPending, error, refetch } = useExamenGrupo(grupoId, examenId);
 
-  const volver = examen?.semana ? rutas.semana(grupoId, examen.semana) : rutas.inicio;
+  useBotonVolver(
+    examen?.semana
+      ? { ruta: rutas.semana(grupoId, examen.semana), texto: APP_TEXTS.nav.volverSemana(examen.semana) }
+      : { ruta: rutas.inicio, texto: APP_TEXTS.nav.volverInicio },
+  );
 
   return (
     <main className="min-h-screen">
       <div className="max-w-[900px] mx-auto p-gutter py-8 space-y-8">
-        <Link to={volver} className={estilos.enlaceVolver}>
-          <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-          {examen?.semana ? `Volver a la semana ${examen.semana}` : 'Volver al inicio'}
-        </Link>
-
         {isPending && <Cargando texto="Cargando examen…" />}
         {error && <MensajeError error={error} alReintentar={() => void refetch()} />}
         {examen === null && <EstadoVacio icono="search_off" titulo="No encontramos este examen." />}

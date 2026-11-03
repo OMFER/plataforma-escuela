@@ -7,7 +7,8 @@ export const estadoDeVentana = (ventana: Ventana, ahora: Date = new Date()): Est
   if (Number.isNaN(abre) || Number.isNaN(cierra)) return ventana.estado;
   const t = ahora.getTime();
   if (t < abre) return 'proxima';
-  if (t > cierra) return 'cerrada';
+  // El instante de cierre ya cuenta como cerrado, igual que en el backend
+  if (t >= cierra) return 'cerrada';
   return 'abierta';
 };
 

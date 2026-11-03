@@ -1,12 +1,12 @@
-import { Link } from 'react-router-dom';
 import { TablaCalificacionesAlumno } from '../components/calificaciones/TablaCalificacionesAlumno';
 import { TablaCalificacionesGrupo } from '../components/calificaciones/TablaCalificacionesGrupo';
 import { Cargando } from '../components/common/Cargando';
 import { EstadoVacio } from '../components/common/EstadoVacio';
 import { MensajeError } from '../components/common/MensajeError';
-import { estilos } from '../components/common/estilos';
 import { useCalificaciones } from '../hooks/consultas';
 import { useGrupoDeRuta } from '../hooks/useParametrosGrupo';
+import { APP_TEXTS } from '../constants/textos';
+import { useBotonVolver } from '../providers/BotonVolverContext';
 import { useUsuarioActual } from '../providers/SesionContext';
 import { rutas } from '../routes/rutas';
 
@@ -16,14 +16,11 @@ export const CalificacionesPage = () => {
   const calificaciones = useCalificaciones(grupoId);
   const esAlumno = usuario.rol === 'alumno';
   const propias = calificaciones.data?.[0];
+  useBotonVolver({ ruta: rutas.inicio, texto: APP_TEXTS.nav.volverInicio });
 
   return (
     <main className="min-h-screen">
       <div className="max-w-[1100px] mx-auto p-gutter py-8 space-y-8">
-        <Link to={rutas.inicio} className={estilos.enlaceVolver}>
-          <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-          Volver al inicio
-        </Link>
         <header className="space-y-1">
           {grupo.data && (
             <p className="text-title-md text-primary">

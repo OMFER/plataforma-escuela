@@ -5,6 +5,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { APP_TEXTS } from '../constants/textos';
 import { Campo } from '../components/common/Campo';
+import { InputPassword } from '../components/common/InputPassword';
 import { MensajeError } from '../components/common/MensajeError';
 import { estilos } from '../components/common/estilos';
 import { useSesion } from '../providers/SesionContext';
@@ -76,7 +77,7 @@ export const LoginPage = () => {
             <input id="correo" type="email" autoComplete="username" className={estilos.input} {...register('correo')} />
           </Campo>
           <Campo etiqueta="Contraseña" htmlFor="password" error={errors.password?.message}>
-            <input id="password" type="password" autoComplete="current-password" className={estilos.input} {...register('password')} />
+            <InputPassword id="password" autoComplete="current-password" {...register('password')} />
           </Campo>
           <button type="submit" disabled={isSubmitting} className={`${estilos.botonPrimario} w-full`}>
             {isSubmitting ? 'Entrando…' : 'Entrar'}

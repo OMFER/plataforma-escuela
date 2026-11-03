@@ -1,5 +1,13 @@
-import { useParams } from 'react-router-dom';
+import { useMatch, useParams } from 'react-router-dom';
 import { useGrupo } from './consultas';
+
+/** Para piezas fuera de las rutas (como el header): si la pantalla actual pertenece a un grupo, lo carga. */
+export const useGrupoEnPantalla = () => {
+  const deGrupo = useMatch('/grupos/:grupoId/*');
+  const grupoId = deGrupo?.params.grupoId ?? '';
+  const grupo = useGrupo(grupoId);
+  return grupoId ? grupo.data : undefined;
+};
 
 /** Lee `:grupoId` de la URL y carga el grupo (con su materia). */
 export const useGrupoDeRuta = () => {

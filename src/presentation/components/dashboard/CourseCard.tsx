@@ -4,7 +4,9 @@ import { describirAvance, porcentajeAvance, semanaSugerida } from '../../../doma
 import { APP_TEXTS } from '../../constants/textos';
 import { rutas } from '../../routes/rutas';
 import { estilos } from '../common/estilos';
+import { useUsuarioActual } from '../../providers/SesionContext';
 import { AccesoExamenFinal } from './AccesoExamenFinal';
+import { CalificacionAcumulada } from './CalificacionAcumulada';
 import { WeekSelector } from './WeekSelector';
 
 interface CourseCardProps {
@@ -17,12 +19,16 @@ const detalleGrupo = (grupo: Grupo): string =>
 export const CourseCard = ({ grupo }: CourseCardProps) => {
   const { totalSemanas } = grupo.materia;
   const avance = porcentajeAvance(grupo.semanaActual, totalSemanas);
+  const esAlumno = useUsuarioActual().rol === 'alumno';
 
   return (
     <article className="bg-surface-container-lowest rounded-xl p-6 md:p-8 shadow-sm border border-surface-container-high">
       <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 mb-6">
         <div>
-          <h3 className="text-title-md font-headline-lg text-on-surface mb-1">{grupo.materia.nombre}</h3>
+          <div className="flex flex-wrap items-center gap-3 mb-1">
+            <h3 className="text-title-md font-headline-lg text-on-surface">{grupo.materia.nombre}</h3>
+            {esAlumno && <CalificacionAcumulada grupoId={grupo.id} />}
+          </div>
           <p className="text-body-sm text-outline">{detalleGrupo(grupo)}</p>
           {grupo.maestro.nombre && (
             <p className="mt-3 flex items-center gap-1 text-body-sm text-on-surface-variant">

@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { preguntasEjemplo, resumenExamen, sesionAlumno, ventanas } from '../test/datos';
 import { renderApp } from '../test/renderApp';
 import { RevisionExamen } from './components/examen/RevisionExamen';
@@ -50,9 +50,12 @@ describe('pantalla de examen del alumno', () => {
     await usuario.click(enviar);
     const dialogo = screen.getByRole('dialog', { name: '¿Enviar tus respuestas?' });
     expect(dialogo).toHaveTextContent('Solo tienes un intento');
+    vi.mocked(window.scrollTo).mockClear();
     await usuario.click(within(dialogo).getByRole('button', { name: 'Sí, enviar' }));
 
     expect(await screen.findByText('Calificación: 5 / 10')).toBeInTheDocument();
+    // La revisión se muestra desde arriba, no desde donde estaba el botón de enviar.
+    expect(window.scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }));
     expect(screen.getByText('Aciertos: 1 de 2')).toBeInTheDocument();
     expect(repos.examenesGrupo.respuestasRecibidas).toEqual([[1, 2]]);
     expect(screen.queryByRole('button', { name: /Enviar respuestas/ })).not.toBeInTheDocument();
@@ -60,8 +63,16 @@ describe('pantalla de examen del alumno', () => {
     const segunda = screen.getByRole('article', { name: 'Pregunta 2' });
     expect(within(segunda).getByText('✗ Incorrecta')).toBeInTheDocument();
     expect(within(segunda).getByText('Rojo').closest('li')).toHaveTextContent('Tu respuesta');
-    expect(within(segunda).getByText('Azul').closest('li')).toHaveTextContent('Respuesta correcta');
-    expect(within(screen.getByRole('article', { name: 'Pregunta 1' })).getByText('✓ Correcta')).toBeInTheDocument();
+    // El examen sigue abierto para el grupo: la respuesta correcta todavía no se muestra
+    expect(within(segunda).getByText('Azul').closest('li')).not.toHaveTextContent('Respuesta correcta');
+    expect(screen.getByRole('note')).toHaveTextContent(
+      'Las respuestas correctas se mostrarán cuando cierre el examen, el 10 de enero de 2099',
+    );
+    const primera = screen.getByRole('article', { name: 'Pregunta 1' });
+    expect(within(primera).getByText('✓ Correcta')).toBeInTheDocument();
+    // Aunque la correcta aún no se revela, la opción elegida que acertó va en verde con palomita (no en rojo).
+    expect(within(primera).getByText('4').closest('li')).toHaveAttribute('data-estado', 'acertada');
+    expect(within(segunda).getByText('Rojo').closest('li')).toHaveAttribute('data-estado', 'equivocada');
   });
 
   it('si ya respondió muestra directamente su calificación y la revisión', async () => {

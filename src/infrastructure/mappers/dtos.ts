@@ -51,6 +51,7 @@ export interface CalificacionesAlumnoDto {
   alumno: RefDto;
   semanas?: { semana: number; semanal: NotaDto | null; reposicion: NotaDto | null; mejor: NotaDto | null }[];
   final: NotaDto | null;
+  semestre?: number;
 }
 
 export interface RecursoDto {
@@ -95,6 +96,7 @@ export interface ExamenDto {
   descripcion?: string;
   puntajeMaximo?: number;
   diasExtra?: number;
+  tieneRespuestas?: boolean;
   preguntas?: PreguntaDto[];
 }
 
@@ -135,6 +137,7 @@ export interface ExamenesSemanaDto {
 
 export interface ResultadoRevisionDto extends ResultadoIntentoDto {
   revision?: PreguntaDto[];
+  ventana?: VentanaDto;
 }
 
 export interface IntentoDto extends ResultadoIntentoDto {

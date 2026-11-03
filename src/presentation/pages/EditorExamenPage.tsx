@@ -1,13 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { esTipoExamen, type Examen } from '../../domain/entities/Examen';
 import { preguntasIguales } from '../../domain/rules/examen';
 import { AccionEliminar } from '../components/common/AccionEliminar';
 import { Cargando } from '../components/common/Cargando';
 import { EstadoVacio } from '../components/common/EstadoVacio';
 import { MensajeError } from '../components/common/MensajeError';
-import { estilos } from '../components/common/estilos';
 import { FormularioExamen } from '../components/examen/FormularioExamen';
 import { TablaIntentos } from '../components/examen/TablaIntentos';
 import {
@@ -17,9 +16,10 @@ import {
   valoresInicialesExamen,
   type FormularioExamenValores,
 } from '../components/examen/esquemaExamen';
-import { NOMBRE_TIPO_EXAMEN } from '../constants/textos';
+import { APP_TEXTS, NOMBRE_TIPO_EXAMEN } from '../constants/textos';
 import { claves, useExamen, useExamenesGrupo, useIntentosExamen } from '../hooks/consultas';
 import { useGrupoDeRuta } from '../hooks/useParametrosGrupo';
+import { useBotonVolver } from '../providers/BotonVolverContext';
 import { useCasosDeUso } from '../providers/DependenciasContext';
 import { rutas } from '../routes/rutas';
 import { describirVentana } from '../utils/ventana';
@@ -52,8 +52,9 @@ export const EditorExamenPage = () => {
   const semana = examen.data?.semana ?? nuevo.semana;
   const volver =
     tipo === 'Final'
-      ? { ruta: rutas.inicio, texto: 'Volver al inicio' }
-      : { ruta: rutas.semana(grupoId, semana), texto: `Volver a la semana ${semana}` };
+      ? { ruta: rutas.inicio, texto: APP_TEXTS.nav.volverInicio }
+      : { ruta: rutas.semana(grupoId, semana), texto: APP_TEXTS.nav.volverSemana(semana) };
+  useBotonVolver(volver);
   const resumen = resumenes.data?.find((e) => e.id === examenId);
   const avisoVisible = aviso ?? (location.state as EstadoNavegacion | null)?.aviso ?? null;
 
@@ -92,10 +93,6 @@ export const EditorExamenPage = () => {
     <main className="min-h-screen">
       <div className="max-w-[900px] mx-auto p-gutter py-8 space-y-8">
         <section className="space-y-4">
-          <Link to={volver.ruta} className={estilos.enlaceVolver}>
-            <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-            {volver.texto}
-          </Link>
           {grupo.data && (
             <p className="text-title-md text-primary">
               {grupo.data.materia.nombre}
@@ -135,11 +132,6 @@ export const EditorExamenPage = () => {
         {grupo.error && <MensajeError error={grupo.error} alReintentar={() => void grupo.refetch()} />}
         {examen.error && <MensajeError error={examen.error} alReintentar={() => void examen.refetch()} />}
         {!esNuevo && examen.data === null && <EstadoVacio icono="search_off" titulo="No encontramos este examen." />}
-        {avisoVisible && (
-          <p role="status" className="bg-secondary-container/30 border-l-4 border-primary p-3 rounded-r-lg text-body-sm">
-            {avisoVisible}
-          </p>
-        )}
 
         {grupo.data && (esNuevo || examen.data) && (
           <FormularioExamen
@@ -147,8 +139,9 @@ export const EditorExamenPage = () => {
             valoresIniciales={valoresInicialesExamen(examen.data ?? null, nuevo)}
             totalSemanas={grupo.data.materia.totalSemanas}
             esNuevo={esNuevo}
-            tieneIntentos={(intentos.data?.length ?? 0) > 0}
+            tieneIntentos={examen.data?.tieneRespuestas ?? (intentos.data?.length ?? 0) > 0}
             error={guardado.error}
+            aviso={avisoVisible}
             guardando={guardado.isPending}
             alGuardar={(valores) => guardado.mutate(valores)}
             alCancelar={() => navigate(volver.ruta)}

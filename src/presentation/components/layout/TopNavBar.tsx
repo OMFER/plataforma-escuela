@@ -1,35 +1,45 @@
-import { APP_TEXTS, ETIQUETAS_ROL } from '../../constants/textos';
-import { useUsuarioActual } from '../../providers/SesionContext';
+import { Link } from 'react-router-dom';
+import { useGrupoEnPantalla } from '../../hooks/useParametrosGrupo';
+import { useDestinoVolver } from '../../providers/BotonVolverContext';
+import { estilos } from '../common/estilos';
+import { BotonMenuLateral } from './BotonMenuLateral';
+import { LogoEscuela } from './LogoEscuela';
+import { MenuUsuario } from './MenuUsuario';
 
-const iniciales = (nombre: string): string =>
-  nombre
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? '')
-    .join('');
+interface TopNavBarProps {
+  menuAbierto: boolean;
+  alAlternarMenu: () => void;
+}
 
-export const TopNavBar = () => {
-  const usuario = useUsuarioActual();
+export const TopNavBar = ({ menuAbierto, alAlternarMenu }: TopNavBarProps) => {
+  const grupo = useGrupoEnPantalla();
+  const volver = useDestinoVolver();
 
   return (
     <header className="sticky top-0 w-full z-30 bg-surface shadow-sm">
-      <div className="max-w-[1440px] mx-auto flex justify-between items-center px-gutter py-4">
-        <div className="flex items-center gap-2 md:hidden">
-          <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>school</span>
-          <span className="text-title-md font-headline-lg font-bold text-primary">{APP_TEXTS.brand.name}</span>
+      <div className="max-w-[1440px] mx-auto flex items-center gap-3 px-gutter py-4">
+        {/* Con el menú abierto, la hamburguesa vive dentro del menú lateral. */}
+        {!menuAbierto && <BotonMenuLateral menuAbierto={false} alAlternar={alAlternarMenu} />}
+
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Cada pantalla declara su regreso con useBotonVolver; siempre se muestra aquí. */}
+          {volver && (
+            <Link to={volver.ruta} className={`${estilos.enlaceVolver} shrink-0`} title={volver.texto}>
+              <span className="material-symbols-outlined text-[16px]" aria-hidden="true">arrow_back</span>
+              <span className="sr-only sm:not-sr-only">{volver.texto}</span>
+            </Link>
+          )}
+          {grupo && (
+            <p className={`text-title-md font-bold text-on-surface truncate ${volver ? 'border-l border-outline-variant pl-3' : ''}`} title={grupo.materia.nombre}>
+              {grupo.materia.nombre}
+            </p>
+          )}
         </div>
 
-        <div className="flex items-center gap-3 ml-auto pl-4 border-l border-outline-variant">
-          <div className="text-right">
-            <p className="text-label-caps font-bold text-on-surface">{usuario.nombre}</p>
-            <p className="text-[10px] text-on-surface-variant">{ETIQUETAS_ROL[usuario.rol]}</p>
-          </div>
-          <div
-            aria-hidden="true"
-            className="w-10 h-10 rounded-full border-2 border-primary-fixed bg-primary-container text-on-primary flex items-center justify-center font-bold text-body-sm"
-          >
-            {iniciales(usuario.nombre)}
+        <div className="flex items-center gap-3 ml-auto shrink-0">
+          {!menuAbierto && <LogoEscuela compacto />}
+          <div className="pl-3 border-l border-outline-variant">
+            <MenuUsuario />
           </div>
         </div>
       </div>

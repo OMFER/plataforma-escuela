@@ -9,11 +9,14 @@ import { BotonExamen } from '../components/examen/BotonExamen';
 import { APP_TEXTS } from '../constants/textos';
 import { useContenidoSemana, useExamenesSemana } from '../hooks/consultas';
 import { useParametrosSemana } from '../hooks/useParametrosGrupo';
+import { useBotonVolver } from '../providers/BotonVolverContext';
+import { rutas } from '../routes/rutas';
 import { useUsuarioActual } from '../providers/SesionContext';
 
 export const SemanaPage = () => {
   const usuario = useUsuarioActual();
   const { grupoId, semana, grupo, materiaId } = useParametrosSemana();
+  useBotonVolver({ ruta: rutas.inicio, texto: APP_TEXTS.nav.volverInicio });
   const contenido = useContenidoSemana(materiaId, semana);
   const examenes = useExamenesSemana(grupoId, semana);
   const esMaestro = usuario.rol === 'maestro';

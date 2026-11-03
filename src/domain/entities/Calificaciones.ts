@@ -17,4 +17,6 @@ export interface CalificacionesAlumno {
   alumno: UsuarioResumen;
   semanas: CalificacionSemana[];
   final: Nota | null;
+  /** Lo que lleva en el semestre, sobre 10 (lo calcula el servidor); null si no viene. */
+  semestre: number | null;
 }

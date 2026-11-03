@@ -90,8 +90,8 @@ export const preguntasIguales = (
   });
 
 const esRevisada = (p: PreguntaVista): p is PreguntaRevisada =>
-  typeof p.respuestaCorrecta === 'number' && typeof p.miRespuesta === 'number' && typeof p.acierto === 'boolean';
+  typeof p.miRespuesta === 'number' && typeof p.acierto === 'boolean';
 
-/** Preguntas con revisión completa (lo que ve el alumno tras responder); vacío si no aplica. */
+/** Preguntas con revisión (lo que ve el alumno tras responder); vacío si no aplica. */
 export const revisionDe = (preguntas: PreguntaVista[]): PreguntaRevisada[] =>
   preguntas.length > 0 && preguntas.every(esRevisada) ? (preguntas as PreguntaRevisada[]) : [];
