@@ -14,12 +14,14 @@ const calificacionesAna: CalificacionesAlumno = {
     { semana: 2, semanal: nota(7), reposicion: null, mejor: nota(7) },
   ],
   final: null,
+  semestre: 0.9,
 };
 
 const calificacionesBeto: CalificacionesAlumno = {
   alumno: { id: 'u4', nombre: 'Beto Gil', correo: 'beto@escuela.mx' },
   semanas: [{ semana: 1, semanal: nota(10), reposicion: null, mejor: nota(10) }],
   final: nota(8),
+  semestre: 1.1,
 };
 
 const filas = () => screen.getAllByRole('row').slice(1);

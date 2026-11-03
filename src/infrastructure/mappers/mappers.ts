@@ -93,6 +93,7 @@ export const aCalificaciones = (dto: CalificacionesAlumnoDto): CalificacionesAlu
     mejor: aNota(s.mejor),
   })),
   final: aNota(dto.final),
+  semestre: dto.semestre ?? null,
 });
 
 const aRecurso = (dto: RecursoDto): Recurso => ({

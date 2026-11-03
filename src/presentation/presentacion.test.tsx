@@ -125,6 +125,31 @@ describe('dashboard', () => {
   });
 });
 
+describe('home', () => {
+  it('junto a cada materia el alumno ve la calificación del semestre que calcula el servidor', async () => {
+    renderApp('/', {
+      sesion: sesionAlumno,
+      preparar: (r) => {
+        r.grupos.lista.push(grupoEjemplo);
+        r.grupos.calificaciones.g1 = [{ alumno: usuarioAlumno, semanas: [], final: null, semestre: 0.44 }];
+      },
+    });
+    expect(await screen.findByLabelText('Calificación acumulada: 0.4 de 10')).toBeInTheDocument();
+  });
+
+  it('el maestro no ve calificación junto a la materia', async () => {
+    renderApp('/', {
+      sesion: sesionMaestro,
+      preparar: (r) => {
+        r.grupos.lista.push(grupoEjemplo);
+        r.grupos.calificaciones.g1 = [{ alumno: usuarioAlumno, semanas: [], final: null, semestre: 5 }];
+      },
+    });
+    expect(await screen.findByText(grupoEjemplo.materia.nombre)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Calificación acumulada/)).not.toBeInTheDocument();
+  });
+});
+
 describe('semana', () => {
   const contenido = {
     id: 'c1',

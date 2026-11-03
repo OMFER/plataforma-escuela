@@ -29,6 +29,7 @@ describe('semanasCalificadas', () => {
     alumno: { id, nombre: id },
     semanas: semanas.map((semana) => ({ semana, semanal: null, reposicion: null, mejor: null })),
     final: null,
+    semestre: null,
   });
 
   it('une y ordena las semanas de todos los alumnos', () => {
@@ -36,3 +37,4 @@ describe('semanasCalificadas', () => {
     expect(semanasCalificadas([])).toEqual([]);
   });
 });
+

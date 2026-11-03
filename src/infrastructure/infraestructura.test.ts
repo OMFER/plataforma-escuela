@@ -207,11 +207,13 @@ describe('mappers', () => {
         alumno: { _id: 'a1', nombre: 'Ana', correo: 'a@x.mx' },
         semanas: [{ semana: 1, semanal: nota, reposicion: null, mejor: nota }],
         final: null,
+        semestre: 0.5,
       }),
     ).toEqual({
       alumno: { id: 'a1', nombre: 'Ana', correo: 'a@x.mx' },
       semanas: [{ semana: 1, semanal: nota, reposicion: null, mejor: nota }],
       final: null,
+      semestre: 0.5,
     });
     expect(
       aIntento({

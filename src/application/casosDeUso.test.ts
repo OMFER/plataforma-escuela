@@ -328,8 +328,9 @@ describe('grupos', () => {
           { semana: 1, semanal: null, reposicion: null, mejor: null },
         ],
         final: null,
+        semestre: 0.5,
       },
-      { alumno: { id: 'a1', nombre: 'Ana' }, semanas: [], final: nota },
+      { alumno: { id: 'a1', nombre: 'Ana' }, semanas: [], final: nota, semestre: 0.5 },
     ];
     const lista = await new ObtenerCalificaciones(r.grupos).ejecutar('g1');
     expect(lista.map((c) => c.alumno.nombre)).toEqual(['Ana', 'Zoe']);

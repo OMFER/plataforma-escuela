@@ -20,6 +20,8 @@ export const APP_TEXTS = {
     weeklyProgress: 'Calendario semanal',
     sinGrupos: 'Aún no tienes grupos asignados.',
     calificaciones: 'Calificaciones',
+    calificacionAcumulada: 'Calificación acumulada',
+    ayudaCalificacion: 'Lo que llevas hasta ahora: cada semana y el examen final valen lo mismo; lo que falta por presentar cuenta 0.',
   },
   semana: {
     sinContenido: 'El maestro aún no publica el contenido de esta semana',

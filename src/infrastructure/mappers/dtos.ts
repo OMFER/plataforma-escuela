@@ -51,6 +51,7 @@ export interface CalificacionesAlumnoDto {
   alumno: RefDto;
   semanas?: { semana: number; semanal: NotaDto | null; reposicion: NotaDto | null; mejor: NotaDto | null }[];
   final: NotaDto | null;
+  semestre?: number;
 }
 
 export interface RecursoDto {
