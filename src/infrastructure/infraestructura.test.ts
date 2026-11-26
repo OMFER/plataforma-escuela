@@ -3,10 +3,12 @@ import { ErrorAplicacion } from '../domain/errors/ErrorAplicacion';
 import { FetchHttpClient, traducirError } from './http/FetchHttpClient';
 import {
   aCalificaciones,
+  aCambio,
   aExamen,
   aExamenGrupo,
   aGrupo,
-  aIntento,
+  aMateriaEnPlan,
+  aPlanDetallado,
   aResultadoConRevision,
   aResumenExamen,
   aUsuario,
@@ -15,6 +17,8 @@ import { HttpContenidoRepository } from './repositories/HttpContenidoRepository'
 import { HttpExamenesGrupoRepository } from './repositories/HttpExamenesGrupoRepository';
 import { HttpExamenesRepository } from './repositories/HttpExamenesRepository';
 import { HttpGruposRepository } from './repositories/HttpGruposRepository';
+import { HttpMateriasRepository } from './repositories/HttpMateriasRepository';
+import { HttpPlanesRepository } from './repositories/HttpPlanesRepository';
 import { LocalStorageSesionRepository } from './storage/LocalStorageSesionRepository';
 
 const respuestaJson = (estado: number, cuerpo?: unknown) =>
@@ -37,6 +41,11 @@ describe('traducirError', () => {
   it('acepta message como string o string[]', () => {
     expect(traducirError(409, { statusCode: 409, message: 'Ya respondiste' }).mensajes).toEqual(['Ya respondiste']);
     expect(traducirError(400, { statusCode: 400, message: ['a', 'b'], error: 'Bad Request' }).mensajes).toEqual(['a', 'b']);
+  });
+
+  it('agrega los detalles (p. ej. un error por fila al importar)', () => {
+    const error = traducirError(400, { message: 'La hoja tiene 2 errores', detalles: ['Fila 2: x', 'Fila 3: y'] });
+    expect(error.mensajes).toEqual(['La hoja tiene 2 errores', 'Fila 2: x', 'Fila 3: y']);
   });
 
   it('usa un mensaje en español si el cuerpo no trae message', () => {
@@ -103,92 +112,156 @@ describe('repositorios HTTP', () => {
     await repo.obtenerMios();
     await repo.inscribirAlumnos('g1', ['a1']);
     await repo.darDeBajaAlumno('g1', 'a1');
-    await repo.obtenerCalificaciones('g1');
     await repo.eliminar('g1');
     expect(llamadas()).toEqual([
       'GET http://api.test/grupos/mios',
       'POST http://api.test/grupos/g1/alumnos',
       'DELETE http://api.test/grupos/g1/alumnos/a1',
-      'GET http://api.test/grupos/g1/calificaciones',
       'DELETE http://api.test/grupos/g1',
     ]);
+    const calificaciones = crearHttp({ materias: [], boletas: [] });
+    await expect(new HttpGruposRepository(calificaciones.http).obtenerCalificaciones('g1')).resolves.toEqual({
+      materias: [],
+      boletas: [],
+    });
+    expect(calificaciones.llamadas()).toEqual(['GET http://api.test/grupos/g1/calificaciones']);
   });
 
-  it('responde y consulta exámenes dentro del grupo', async () => {
-    const { http, llamadas, cuerpo } = crearHttp({ semanal: null, reposicion: null });
+  it('pide los exámenes de una semana de una materia y responde dentro del grupo', async () => {
+    const { http, llamadas, cuerpo } = crearHttp([]);
     const repo = new HttpExamenesGrupoRepository(http);
-    await expect(repo.obtenerPorSemana('g1', 3)).resolves.toEqual({ semanal: null, reposicion: null });
+    await expect(repo.obtenerDeSemana('g1', 'm1', 2)).resolves.toEqual([]);
     await repo.responder('g1', 'e1', [0, 2]);
     expect(llamadas()).toEqual([
-      'GET http://api.test/grupos/g1/examenes/semana/3',
+      'GET http://api.test/grupos/g1/materias/m1/semanas/2/examenes',
       'POST http://api.test/grupos/g1/examenes/e1/intentos',
     ]);
     expect(cuerpo(1)).toEqual({ respuestas: [0, 2] });
-
-    const intentos = crearHttp([]);
-    await new HttpExamenesGrupoRepository(intentos.http).obtenerIntentos('g1', 'e1');
-    expect(intentos.llamadas()).toEqual(['GET http://api.test/grupos/g1/examenes/e1/intentos']);
   });
 
-  it('crea la plantilla del Final sin semana y elimina por id', async () => {
-    const { http, llamadas, cuerpo } = crearHttp({ _id: 'e9', materia: 'm1', tipo: 'Final', titulo: 'Final', diasExtra: 2 });
+  it('crea, lista e importa los exámenes de la materia', async () => {
+    const { http, llamadas, cuerpo } = crearHttp({ _id: 'e9', materia: 'm1', semana: 2, numero: 1, titulo: 'X', diasExtra: 2 });
     const repo = new HttpExamenesRepository(http);
-    const examen = await repo.crear({ materiaId: 'm1', tipo: 'Final', titulo: 'Final', diasExtra: 2, preguntas: [] });
-    await repo.eliminar('e9');
-    expect(examen).toMatchObject({ id: 'e9', tipo: 'Final', diasExtra: 2 });
-    expect(examen).not.toHaveProperty('semana');
-    expect(cuerpo()).not.toHaveProperty('semana');
-    expect(llamadas()).toEqual(['POST http://api.test/examenes', 'DELETE http://api.test/examenes/e9']);
+    const examen = await repo.crear({ materiaId: 'm1', semana: 2, numero: 1, titulo: 'X', diasExtra: 2, preguntas: [] });
+    expect(examen).toMatchObject({ id: 'e9', semana: 2, numero: 1, diasExtra: 2 });
+    expect(cuerpo()).toMatchObject({ semana: 2, numero: 1 });
+
+    const lista = crearHttp([]);
+    const repoLista = new HttpExamenesRepository(lista.http);
+    await repoLista.listarPorMateria('m1');
+    await repoLista.importar('m1', 'semana,examen');
+    expect(lista.llamadas()).toEqual([
+      'GET http://api.test/examenes/materia/m1',
+      'POST http://api.test/examenes/materia/m1/importar',
+    ]);
+    expect(lista.cuerpo(1)).toEqual({ csv: 'semana,examen' });
+    expect(llamadas()).toEqual(['POST http://api.test/examenes']);
+  });
+
+  it('usa las rutas de planes, publicación, versiones y bitácora', async () => {
+    const plan = { _id: 'p1', nombre: 'Prepa', version: 1, estado: 'publicado' };
+    const { http, llamadas } = crearHttp(plan);
+    const repo = new HttpPlanesRepository(http);
+    await repo.publicar('p1');
+    await repo.crearNuevaVersion('p1');
+    await repo.actualizar('p1', { descripcion: 'x' });
+    expect(llamadas()).toEqual([
+      'POST http://api.test/planes/p1/publicar',
+      'POST http://api.test/planes/p1/versiones',
+      'PATCH http://api.test/planes/p1',
+    ]);
+
+    const revision = crearHttp({ listo: false, pendientes: ['Falta algo'] });
+    await expect(new HttpPlanesRepository(revision.http).revisar('p1')).resolves.toEqual({ listo: false, pendientes: ['Falta algo'] });
+    expect(revision.llamadas()).toEqual(['GET http://api.test/planes/p1/pendientes']);
+
+    const cambios = crearHttp([]);
+    await new HttpPlanesRepository(cambios.http).listarCambios('p1');
+    expect(cambios.llamadas()).toEqual(['GET http://api.test/planes/p1/cambios']);
+  });
+
+  it('las materias del maestro salen de /materias/mias', async () => {
+    const { http, llamadas } = crearHttp([]);
+    await new HttpMateriasRepository(http).listarMias();
+    expect(llamadas()).toEqual(['GET http://api.test/materias/mias']);
   });
 });
 
 describe('mappers', () => {
-  it('mapea el grupo con su materia y maestro poblados', () => {
+  const planDto = { _id: 'p1', nombre: 'Prepa', version: 2, estado: 'publicado', publicadoEn: '2026-07-01' };
+
+  it('mapea el grupo con su plan, materias y semanas por bloque', () => {
     const grupo = aGrupo({
       _id: 'g1',
-      nombre: '05',
-      periodo: '2026-B',
-      fechaInicio: '2026-08-03',
-      materia: { _id: 'm1', nombre: 'Ética', totalSemanas: 16 },
-      maestro: { _id: 'u2', nombre: 'Carlos', correo: 'c@x.mx' },
+      nombre: 'Generación 1',
+      fechaInicio: '2026-08-03T06:00:00.000Z',
+      plan: planDto,
+      materias: [
+        { _id: 'm1', plan: 'p1', nombre: 'Mate', bloque: 1, maestro: { _id: 'u2', nombre: 'Carlos', correo: 'c@x.mx' } },
+        { _id: 'm2', plan: 'p1', nombre: 'Historia', bloque: 1, maestro: '' },
+      ],
+      semanaActual: 2,
+      semanas: [
+        { numero: 1, inicio: 'a', fin: 'b', estado: 'completada', bloque: 1, semanaDeMateria: 1 },
+        { numero: 2, inicio: 'c', fin: 'd', estado: 'actual', bloque: 1, semanaDeMateria: 2 },
+      ],
     });
-    expect(grupo).toMatchObject({
-      id: 'g1',
-      periodo: '2026-B',
-      materia: { id: 'm1', nombre: 'Ética', totalSemanas: 16 },
-      maestro: { id: 'u2', nombre: 'Carlos', correo: 'c@x.mx' },
-      semanaActual: 0,
-      semanas: [],
-    });
+    expect(grupo.plan).toEqual({ id: 'p1', nombre: 'Prepa', version: 2, estado: 'publicado', publicadoEn: '2026-07-01' });
+    expect(grupo.materias).toEqual([
+      { id: 'm1', planId: 'p1', nombre: 'Mate', bloque: 1, maestroId: 'u2', maestro: { id: 'u2', nombre: 'Carlos', correo: 'c@x.mx' } },
+      { id: 'm2', planId: 'p1', nombre: 'Historia', bloque: 1 },
+    ]);
+    expect(grupo.semanas[1]).toMatchObject({ numero: 2, bloque: 1, semanaDeMateria: 2 });
     expect(aUsuario({ _id: 'u1', nombre: 'Ana', correo: 'a@x.mx', rol: 'alumno', grupos: ['g1'] }).grupos).toEqual(['g1']);
   });
 
-  it('mapea la plantilla, el resumen con ventana y el intento del alumno', () => {
-    const plantilla = aExamen({ _id: 'e1', materia: { _id: 'm1' }, tipo: 'Reposicion', semana: 2, titulo: 'Q', preguntas: [] });
-    expect(plantilla).toMatchObject({ id: 'e1', materiaId: 'm1', tipo: 'Reposicion', semana: 2, puntajeMaximo: 100, diasExtra: 0 });
+  it('mapea el plan con sus materias y la materia del maestro con su plan', () => {
+    expect(aPlanDetallado({ ...planDto, materias: [{ _id: 'm1', plan: 'p1', nombre: 'Mate', bloque: 2 }] }).materias).toEqual([
+      { id: 'm1', planId: 'p1', nombre: 'Mate', bloque: 2 },
+    ]);
+    expect(aMateriaEnPlan({ _id: 'm1', plan: planDto, nombre: 'Mate', bloque: 1, maestro: 'u2' })).toMatchObject({
+      planId: 'p1',
+      maestroId: 'u2',
+      plan: { id: 'p1', version: 2 },
+    });
+  });
+
+  it('mapea la bitácora', () => {
+    expect(
+      aCambio({ _id: 'c1', entidad: 'examen', entidadId: 'e1', accion: 'actualizar', autor: 'u2', fecha: 'f', antes: { a: 1 } }),
+    ).toEqual({ id: 'c1', entidad: 'examen', entidadId: 'e1', accion: 'actualizar', autorId: 'u2', fecha: 'f', antes: { a: 1 } });
+  });
+
+  it('mapea la plantilla y el resumen con su materia, ventana e intento', () => {
+    const plantilla = aExamen({ _id: 'e1', materia: { _id: 'm1' }, semana: 2, numero: 2, titulo: 'Q', preguntas: [] });
+    expect(plantilla).toMatchObject({ id: 'e1', materiaId: 'm1', semana: 2, numero: 2, diasExtra: 0 });
 
     const resumen = aResumenExamen({
       _id: 'e1',
-      tipo: 'Semanal',
+      materia: { _id: 'm1', nombre: 'Mate' },
       semana: 1,
+      numero: 2,
+      semanaDelGrupo: 3,
       titulo: 'Q',
       totalPreguntas: 3,
       ventana: ventanaDto,
-      miIntento: { aciertos: 2, totalPreguntas: 3, calificacion: 66.7, fecha: '2026-08-11' },
+      miIntento: { aciertos: 2, totalPreguntas: 3, calificacion: 6.67, fecha: '2026-08-11' },
     });
+    expect(resumen).toMatchObject({ materia: { id: 'm1', nombre: 'Mate' }, numero: 2, semanaDelGrupo: 3 });
     expect(resumen.ventana).toEqual(ventanaDto);
-    expect(resumen.miIntento).toEqual({ aciertos: 2, totalPreguntas: 3, calificacion: 66.7, fecha: '2026-08-11' });
+    expect(resumen.miIntento).toEqual({ aciertos: 2, totalPreguntas: 3, calificacion: 6.67, fecha: '2026-08-11' });
 
-    const final = aResumenExamen({ _id: 'e2', tipo: 'Final', semana: null, titulo: 'F', ventana: { ...ventanaDto, estado: 'raro' } });
-    expect(final).not.toHaveProperty('semana');
-    expect(final.ventana.estado).toBe('cerrada');
-    expect(final).not.toHaveProperty('miIntento');
+    const raro = aResumenExamen({ _id: 'e2', materia: 'm1', semana: 1, numero: 1, titulo: 'F', ventana: { ...ventanaDto, estado: 'raro' } });
+    expect(raro.ventana.estado).toBe('cerrada');
+    expect(raro).not.toHaveProperty('miIntento');
   });
 
   it('conserva los campos de revisión de cada pregunta', () => {
     const examen = aExamenGrupo({
       _id: 'e1',
-      tipo: 'Semanal',
+      materia: 'm1',
+      semana: 1,
+      numero: 1,
       titulo: 'Q',
       ventana: ventanaDto,
       miIntento: { aciertos: 0, totalPreguntas: 1, calificacion: 0, createdAt: '2026-08-11' },
@@ -200,33 +273,29 @@ describe('mappers', () => {
     expect(examen.miIntento?.fecha).toBe('2026-08-11');
   });
 
-  it('mapea calificaciones e intentos', () => {
-    const nota = { calificacion: 8, puntajeMaximo: 10 };
+  it('mapea las calificaciones del grupo', () => {
+    const notas = [{ semana: 1, numero: 1, calificacion: 8 }];
     expect(
       aCalificaciones({
-        alumno: { _id: 'a1', nombre: 'Ana', correo: 'a@x.mx' },
-        semanas: [{ semana: 1, semanal: nota, reposicion: null, mejor: nota }],
-        final: null,
-        semestre: 0.5,
+        materias: [{ _id: 'm1', nombre: 'Mate', bloque: 1 }],
+        boletas: [
+          {
+            alumno: { _id: 'a1', nombre: 'Ana', correo: 'a@x.mx' },
+            materias: [{ materia: 'm1', notas, promedio: 2, aprobada: false, completa: false }],
+            promedioGeneral: 2,
+          },
+        ],
       }),
     ).toEqual({
-      alumno: { id: 'a1', nombre: 'Ana', correo: 'a@x.mx' },
-      semanas: [{ semana: 1, semanal: nota, reposicion: null, mejor: nota }],
-      final: null,
-      semestre: 0.5,
+      materias: [{ id: 'm1', nombre: 'Mate', bloque: 1 }],
+      boletas: [
+        {
+          alumno: { id: 'a1', nombre: 'Ana', correo: 'a@x.mx' },
+          materias: [{ materiaId: 'm1', notas, promedio: 2, aprobada: false, completa: false }],
+          promedioGeneral: 2,
+        },
+      ],
     });
-    expect(
-      aIntento({
-        _id: 'i1',
-        examen: 'e1',
-        alumno: { _id: 'a1', nombre: 'Ana' },
-        respuestas: [1],
-        aciertos: 1,
-        totalPreguntas: 1,
-        calificacion: 10,
-        createdAt: '2026-08-11',
-      }),
-    ).toMatchObject({ id: 'i1', examenId: 'e1', alumno: { id: 'a1', nombre: 'Ana', correo: '' }, fecha: '2026-08-11' });
   });
 });
 
@@ -261,7 +330,7 @@ describe('revisión mientras el examen sigue abierto', () => {
     const resultado = aResultadoConRevision({
       aciertos: 1,
       totalPreguntas: 1,
-      calificacion: 100,
+      calificacion: 10,
       fecha: '2026-08-12T15:00:00.000Z',
       ventana: { abre: '2026-08-10T06:00:00.000Z', cierra: '2026-08-17T06:00:00.000Z', estado: 'abierta' },
       revision: [{ _id: 'p1', enunciado: '¿?', opciones: ['a', 'b'], miRespuesta: 0, acierto: true }],
@@ -271,7 +340,7 @@ describe('revisión mientras el examen sigue abierto', () => {
   });
 
   it('marca si la plantilla del examen ya tiene respuestas', () => {
-    const examen = aExamen({ _id: 'e1', materia: 'm1', tipo: 'Semanal', semana: 1, titulo: 'X', preguntas: [], tieneRespuestas: true });
+    const examen = aExamen({ _id: 'e1', materia: 'm1', semana: 1, numero: 1, titulo: 'X', preguntas: [], tieneRespuestas: true });
     expect(examen.tieneRespuestas).toBe(true);
   });
 });

@@ -22,20 +22,20 @@ interface CuerpoErrorApi {
   statusCode?: number;
   message?: string | string[];
   error?: string;
+  /** Problemas concretos (p. ej. uno por fila al importar exámenes). */
+  detalles?: unknown;
 }
 
 const esCuerpoError = (valor: unknown): valor is CuerpoErrorApi =>
   typeof valor === 'object' && valor !== null && ('message' in valor || 'statusCode' in valor);
 
-/** Convierte la respuesta de error `{statusCode, message, error}` del backend en ErrorAplicacion. */
+/** Convierte la respuesta de error `{statusCode, message, error, detalles?}` del backend en ErrorAplicacion. */
 export const traducirError = (estado: number, cuerpo: unknown): ErrorAplicacion => {
   if (esCuerpoError(cuerpo)) {
-    const { message } = cuerpo;
-    const mensajes = Array.isArray(message)
-      ? message.filter((m): m is string => typeof m === 'string')
-      : typeof message === 'string'
-        ? [message]
-        : [];
+    const { message, detalles } = cuerpo;
+    const textos = (valor: unknown): string[] =>
+      Array.isArray(valor) ? valor.filter((m): m is string => typeof m === 'string') : typeof valor === 'string' ? [valor] : [];
+    const mensajes = [...textos(message), ...textos(detalles)];
     if (mensajes.length > 0) return new ErrorAplicacion(mensajes, estado);
   }
   return new ErrorAplicacion(MENSAJES_POR_ESTADO[estado] ?? `Error inesperado (${estado}).`, estado);

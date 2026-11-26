@@ -16,11 +16,44 @@ export interface LoginDto {
   usuario: UsuarioDto;
 }
 
-export interface MateriaDto {
+export interface PlanDto {
   _id: string;
   nombre: string;
   descripcion?: string;
-  totalSemanas: number;
+  version: number;
+  estado: string;
+  publicadoEn?: string;
+}
+
+export interface MateriaDto {
+  _id: string;
+  /** El id del plan o, en las materias del maestro, el plan completo. */
+  plan: string | PlanDto;
+  nombre: string;
+  descripcion?: string;
+  bloque: number;
+  /** El id del maestro o, dentro de un plan o un grupo, su resumen. */
+  maestro?: RefDto | null;
+}
+
+export interface PlanDetalladoDto extends PlanDto {
+  materias?: MateriaDto[];
+}
+
+export interface RevisionPlanDto {
+  listo: boolean;
+  pendientes?: string[];
+}
+
+export interface CambioDto {
+  _id: string;
+  entidad: string;
+  entidadId: string;
+  accion: string;
+  autor: string;
+  fecha: string;
+  antes?: unknown;
+  despues?: unknown;
 }
 
 export interface SemanaDto {
@@ -28,30 +61,37 @@ export interface SemanaDto {
   inicio: string;
   fin: string;
   estado: string;
+  bloque?: number;
+  semanaDeMateria?: number;
 }
 
 export interface GrupoDto {
   _id: string;
   nombre: string;
-  periodo: string;
-  aula?: string;
   fechaInicio: string;
-  materia: MateriaDto | string;
-  maestro: RefDto | null;
+  plan: PlanDto | { _id: string };
+  materias?: MateriaDto[];
   semanaActual?: number;
   semanas?: SemanaDto[];
 }
 
-export interface NotaDto {
-  calificacion: number;
-  puntajeMaximo: number;
+export interface NotaExamenDto {
+  semana: number;
+  numero: number;
+  calificacion: number | null;
 }
 
-export interface CalificacionesAlumnoDto {
-  alumno: RefDto;
-  semanas?: { semana: number; semanal: NotaDto | null; reposicion: NotaDto | null; mejor: NotaDto | null }[];
-  final: NotaDto | null;
-  semestre?: number;
+export interface BoletaMateriaDto {
+  materia: string;
+  notas?: NotaExamenDto[];
+  promedio: number;
+  aprobada: boolean;
+  completa: boolean;
+}
+
+export interface CalificacionesGrupoDto {
+  materias?: { _id: string; nombre: string; bloque: number }[];
+  boletas?: { alumno: RefDto; materias?: BoletaMateriaDto[]; promedioGeneral?: number }[];
 }
 
 export interface RecursoDto {
@@ -70,11 +110,9 @@ export interface ClaseDto {
   recursos?: RecursoDto[];
   links?: {
     grabacion?: string;
-    enVivo?: string;
     presentacion?: string;
     descGrabacion?: string;
   };
-  fechaEnVivo?: string;
 }
 
 export interface PreguntaDto {
@@ -90,11 +128,10 @@ export interface PreguntaDto {
 export interface ExamenDto {
   _id: string;
   materia: RefDto;
-  tipo: string;
-  semana?: number | null;
+  semana: number;
+  numero: number;
   titulo: string;
   descripcion?: string;
-  puntajeMaximo?: number;
   diasExtra?: number;
   tieneRespuestas?: boolean;
   preguntas?: PreguntaDto[];
@@ -116,11 +153,12 @@ export interface VentanaDto {
 
 export interface ResumenExamenDto {
   _id: string;
-  tipo: string;
-  semana?: number | null;
+  materia: RefDto;
+  semana: number;
+  numero: number;
+  semanaDelGrupo?: number;
   titulo: string;
   descripcion?: string;
-  puntajeMaximo?: number;
   totalPreguntas?: number;
   ventana: VentanaDto;
   miIntento?: ResultadoIntentoDto | null;
@@ -130,19 +168,7 @@ export interface ExamenGrupoDto extends ResumenExamenDto {
   preguntas?: PreguntaDto[];
 }
 
-export interface ExamenesSemanaDto {
-  semanal: ResumenExamenDto | null;
-  reposicion: ResumenExamenDto | null;
-}
-
 export interface ResultadoRevisionDto extends ResultadoIntentoDto {
   revision?: PreguntaDto[];
   ventana?: VentanaDto;
-}
-
-export interface IntentoDto extends ResultadoIntentoDto {
-  _id: string;
-  examen: RefDto;
-  alumno: RefDto;
-  respuestas: number[];
 }

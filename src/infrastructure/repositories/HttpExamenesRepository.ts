@@ -17,6 +17,15 @@ export class HttpExamenesRepository implements ExamenesRepository {
     return dto ? aExamen(dto) : null;
   }
 
+  async listarPorMateria(materiaId: string): Promise<Examen[]> {
+    return (await this.http.get<ExamenDto[]>(`/examenes/materia/${encodeURIComponent(materiaId)}`)).map(aExamen);
+  }
+
+  async importar(materiaId: string, csv: string): Promise<Examen[]> {
+    const dtos = await this.http.post<ExamenDto[]>(`/examenes/materia/${encodeURIComponent(materiaId)}/importar`, { csv });
+    return dtos.map(aExamen);
+  }
+
   async crear(datos: NuevoExamen): Promise<Examen> {
     return aExamen(await this.http.post<ExamenDto>('/examenes', datos));
   }

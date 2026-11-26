@@ -8,6 +8,7 @@ import { HttpExamenesGrupoRepository } from '../infrastructure/repositories/Http
 import { HttpExamenesRepository } from '../infrastructure/repositories/HttpExamenesRepository';
 import { HttpGruposRepository } from '../infrastructure/repositories/HttpGruposRepository';
 import { HttpMateriasRepository } from '../infrastructure/repositories/HttpMateriasRepository';
+import { HttpPlanesRepository } from '../infrastructure/repositories/HttpPlanesRepository';
 import { HttpUsuariosRepository } from '../infrastructure/repositories/HttpUsuariosRepository';
 import { LocalStorageSesionRepository } from '../infrastructure/storage/LocalStorageSesionRepository';
 
@@ -30,6 +31,7 @@ export const crearContenedor = (baseUrl: string = obtenerUrlApi()): Dependencias
       sesiones,
       auth: new HttpAuthRepository(http),
       usuarios: new HttpUsuariosRepository(http),
+      planes: new HttpPlanesRepository(http),
       materias: new HttpMateriasRepository(http),
       grupos: new HttpGruposRepository(http),
       contenido: new HttpContenidoRepository(http),

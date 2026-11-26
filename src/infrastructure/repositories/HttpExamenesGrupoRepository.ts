@@ -1,12 +1,12 @@
-import type { ExamenGrupo, ExamenesSemana, IntentoAlumno, ResultadoConRevision, ResumenExamen } from '../../domain/entities/Examen';
+import type { ExamenGrupo, ResultadoConRevision, ResumenExamen } from '../../domain/entities/Examen';
 import type { ExamenesGrupoRepository } from '../../domain/repositories/ExamenesGrupoRepository';
 import type { HttpClient } from '../http/HttpClient';
 import { nuloSiNoExiste } from '../http/nuloSiNoExiste';
-import type { ExamenesSemanaDto, ExamenGrupoDto, IntentoDto, ResultadoRevisionDto, ResumenExamenDto } from '../mappers/dtos';
-import { aExamenGrupo, aIntento, aResultadoConRevision, aResumenExamen } from '../mappers/mappers';
+import type { ExamenGrupoDto, ResultadoRevisionDto, ResumenExamenDto } from '../mappers/dtos';
+import { aExamenGrupo, aResultadoConRevision, aResumenExamen } from '../mappers/mappers';
 
-const ruta = (grupoId: string) => `/grupos/${encodeURIComponent(grupoId)}/examenes`;
-const rutaExamen = (grupoId: string, examenId: string) => `${ruta(grupoId)}/${encodeURIComponent(examenId)}`;
+const rutaGrupo = (grupoId: string) => `/grupos/${encodeURIComponent(grupoId)}`;
+const rutaExamen = (grupoId: string, examenId: string) => `${rutaGrupo(grupoId)}/examenes/${encodeURIComponent(examenId)}`;
 
 export class HttpExamenesGrupoRepository implements ExamenesGrupoRepository {
   private readonly http: HttpClient;
@@ -16,15 +16,14 @@ export class HttpExamenesGrupoRepository implements ExamenesGrupoRepository {
   }
 
   async listar(grupoId: string): Promise<ResumenExamen[]> {
-    return (await this.http.get<ResumenExamenDto[]>(ruta(grupoId))).map(aResumenExamen);
+    return (await this.http.get<ResumenExamenDto[]>(`${rutaGrupo(grupoId)}/examenes`)).map(aResumenExamen);
   }
 
-  async obtenerPorSemana(grupoId: string, semana: number): Promise<ExamenesSemana> {
-    const dto = await this.http.get<ExamenesSemanaDto>(`${ruta(grupoId)}/semana/${semana}`);
-    return {
-      semanal: dto?.semanal ? aResumenExamen(dto.semanal) : null,
-      reposicion: dto?.reposicion ? aResumenExamen(dto.reposicion) : null,
-    };
+  async obtenerDeSemana(grupoId: string, materiaId: string, semana: number): Promise<ResumenExamen[]> {
+    const dtos = await this.http.get<ResumenExamenDto[]>(
+      `${rutaGrupo(grupoId)}/materias/${encodeURIComponent(materiaId)}/semanas/${semana}/examenes`,
+    );
+    return dtos.map(aResumenExamen);
   }
 
   async obtener(grupoId: string, examenId: string): Promise<ExamenGrupo | null> {
@@ -35,9 +34,5 @@ export class HttpExamenesGrupoRepository implements ExamenesGrupoRepository {
   async responder(grupoId: string, examenId: string, respuestas: number[]): Promise<ResultadoConRevision> {
     const dto = await this.http.post<ResultadoRevisionDto>(`${rutaExamen(grupoId, examenId)}/intentos`, { respuestas });
     return aResultadoConRevision(dto);
-  }
-
-  async obtenerIntentos(grupoId: string, examenId: string): Promise<IntentoAlumno[]> {
-    return (await this.http.get<IntentoDto[]>(`${rutaExamen(grupoId, examenId)}/intentos`)).map(aIntento);
   }
 }

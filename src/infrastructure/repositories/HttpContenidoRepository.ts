@@ -19,6 +19,10 @@ export class HttpContenidoRepository implements ContenidoRepository {
     return dto ? aContenido(dto) : null;
   }
 
+  async listarPorMateria(materiaId: string): Promise<ContenidoSemana[]> {
+    return (await this.http.get<ClaseDto[]>(`/clases/materia/${encodeURIComponent(materiaId)}`)).map(aContenido);
+  }
+
   async crear(datos: NuevoContenidoSemana): Promise<ContenidoSemana> {
     return aContenido(await this.http.post<ClaseDto>('/clases', datos));
   }

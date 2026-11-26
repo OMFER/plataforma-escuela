@@ -1,10 +1,10 @@
-import type { CalificacionesAlumno } from '../../domain/entities/Calificaciones';
+import type { CalificacionesGrupo } from '../../domain/entities/Calificaciones';
 import type { Grupo, NuevoGrupo } from '../../domain/entities/Grupo';
 import type { Usuario } from '../../domain/entities/Usuario';
 import type { GruposRepository } from '../../domain/repositories/GruposRepository';
 import type { HttpClient } from '../http/HttpClient';
 import { nuloSiNoExiste } from '../http/nuloSiNoExiste';
-import type { CalificacionesAlumnoDto, GrupoDto, UsuarioDto } from '../mappers/dtos';
+import type { CalificacionesGrupoDto, GrupoDto, UsuarioDto } from '../mappers/dtos';
 import { aCalificaciones, aGrupo, aUsuario } from '../mappers/mappers';
 
 const ruta = (grupoId: string) => `/grupos/${encodeURIComponent(grupoId)}`;
@@ -49,7 +49,7 @@ export class HttpGruposRepository implements GruposRepository {
     await this.http.delete(`${ruta(grupoId)}/alumnos/${encodeURIComponent(alumnoId)}`);
   }
 
-  async obtenerCalificaciones(grupoId: string): Promise<CalificacionesAlumno[]> {
-    return (await this.http.get<CalificacionesAlumnoDto[]>(`${ruta(grupoId)}/calificaciones`)).map(aCalificaciones);
+  async obtenerCalificaciones(grupoId: string): Promise<CalificacionesGrupo> {
+    return aCalificaciones(await this.http.get<CalificacionesGrupoDto>(`${ruta(grupoId)}/calificaciones`));
   }
 }
