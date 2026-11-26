@@ -1,4 +1,4 @@
-import type { ExamenesSemana } from '../../domain/entities/Examen';
+import type { ResumenExamen } from '../../domain/entities/Examen';
 import type { ExamenesGrupoRepository } from '../../domain/repositories/ExamenesGrupoRepository';
 
 export class ObtenerExamenesSemana {
@@ -8,8 +8,8 @@ export class ObtenerExamenesSemana {
     this.examenes = examenes;
   }
 
-  /** Semanal y Reposición de la semana; cada uno es null si no existe. */
-  ejecutar(grupoId: string, semana: number): Promise<ExamenesSemana> {
-    return this.examenes.obtenerPorSemana(grupoId, semana);
+  /** Los dos exámenes de la semana (1 o 2) de la materia, en orden; faltan si aún no existen. */
+  async ejecutar(grupoId: string, materiaId: string, semana: number): Promise<ResumenExamen[]> {
+    return (await this.examenes.obtenerDeSemana(grupoId, materiaId, semana)).sort((a, b) => a.numero - b.numero);
   }
 }

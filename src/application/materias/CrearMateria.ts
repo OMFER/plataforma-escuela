@@ -1,6 +1,6 @@
-import { TOTAL_SEMANAS_POR_DEFECTO, type Materia, type NuevaMateria } from '../../domain/entities/Materia';
+import type { Materia, NuevaMateria } from '../../domain/entities/Materia';
 import type { MateriasRepository } from '../../domain/repositories/MateriasRepository';
-import { limpiarMateria } from './validarMateria';
+import { limpiarMateria } from './limpiarMateria';
 
 export class CrearMateria {
   private readonly materias: MateriasRepository;
@@ -10,11 +10,13 @@ export class CrearMateria {
   }
 
   async ejecutar(datos: NuevaMateria): Promise<Materia> {
-    const limpio = limpiarMateria({ ...datos, totalSemanas: datos.totalSemanas ?? TOTAL_SEMANAS_POR_DEFECTO });
+    const limpio = limpiarMateria(datos);
     return this.materias.crear({
+      planId: datos.planId,
       nombre: limpio.nombre ?? '',
-      descripcion: limpio.descripcion || undefined,
-      totalSemanas: limpio.totalSemanas,
+      bloque: datos.bloque,
+      ...(limpio.descripcion ? { descripcion: limpio.descripcion } : {}),
+      ...(datos.maestroId ? { maestroId: datos.maestroId } : {}),
     });
   }
 }

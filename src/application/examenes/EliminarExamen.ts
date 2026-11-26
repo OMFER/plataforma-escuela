@@ -7,7 +7,7 @@ export class EliminarExamen {
     this.examenes = examenes;
   }
 
-  /** Borra también sus intentos. El backend responde 409 si es un Semanal que tiene Reposición. */
+  /** Solo en un plan en borrador (el backend responde 409 si ya está publicado). */
   ejecutar(id: string): Promise<void> {
     return this.examenes.eliminar(id);
   }

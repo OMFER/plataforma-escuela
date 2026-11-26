@@ -1,4 +1,4 @@
-import type { CalificacionesAlumno } from '../../domain/entities/Calificaciones';
+import type { CalificacionesGrupo } from '../../domain/entities/Calificaciones';
 import type { GruposRepository } from '../../domain/repositories/GruposRepository';
 
 export class ObtenerCalificaciones {
@@ -8,11 +8,12 @@ export class ObtenerCalificaciones {
     this.grupos = grupos;
   }
 
-  /** Semanas en orden y alumnos por nombre, para que las tablas no dependan del orden del servidor. */
-  async ejecutar(grupoId: string): Promise<CalificacionesAlumno[]> {
-    const lista = await this.grupos.obtenerCalificaciones(grupoId);
-    return lista
-      .map((c) => ({ ...c, semanas: [...c.semanas].sort((a, b) => a.semana - b.semana) }))
-      .sort((a, b) => a.alumno.nombre.localeCompare(b.alumno.nombre, 'es'));
+  /** Alumnos por nombre, para que la tabla no dependa del orden del servidor. */
+  async ejecutar(grupoId: string): Promise<CalificacionesGrupo> {
+    const { materias, boletas } = await this.grupos.obtenerCalificaciones(grupoId);
+    return {
+      materias,
+      boletas: [...boletas].sort((a, b) => a.alumno.nombre.localeCompare(b.alumno.nombre, 'es')),
+    };
   }
 }

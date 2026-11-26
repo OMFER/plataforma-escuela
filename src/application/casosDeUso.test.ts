@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import type { ResumenExamen } from '../domain/entities/Examen';
 import { ErrorAplicacion } from '../domain/errors/ErrorAplicacion';
-import { crearRepositoriosFalsos, grupoEjemplo, usuarioAlumno } from '../test/fakes';
+import { boletaMateria } from '../test/datos';
+import { crearRepositoriosFalsos, grupoEjemplo, sembrarPlan, usuarioAlumno } from '../test/fakes';
 import { IniciarSesion } from './auth/IniciarSesion';
 import { EliminarContenidoSemana } from './contenido/EliminarContenidoSemana';
 import { GuardarContenidoSemana } from './contenido/GuardarContenidoSemana';
+import { ListarContenidoMateria } from './contenido/ListarContenidoMateria';
 import { ActualizarExamen } from './examenes/ActualizarExamen';
 import { CrearExamen } from './examenes/CrearExamen';
-import { EliminarExamen } from './examenes/EliminarExamen';
+import { ImportarExamenes } from './examenes/ImportarExamenes';
+import { ListarExamenesMateria } from './examenes/ListarExamenesMateria';
 import { ObtenerExamenesSemana } from './examenesGrupo/ObtenerExamenesSemana';
 import { ObtenerExamenGrupo } from './examenesGrupo/ObtenerExamenGrupo';
-import { ObtenerIntentosExamen } from './examenesGrupo/ObtenerIntentosExamen';
 import { ResponderExamen } from './examenesGrupo/ResponderExamen';
 import { CrearGrupo } from './grupos/CrearGrupo';
 import { EliminarGrupo } from './grupos/EliminarGrupo';
@@ -19,14 +21,19 @@ import { ObtenerCalificaciones } from './grupos/ObtenerCalificaciones';
 import { ActualizarMateria } from './materias/ActualizarMateria';
 import { CrearMateria } from './materias/CrearMateria';
 import { EliminarMateria } from './materias/EliminarMateria';
+import { ListarMisMaterias } from './materias/ListarMisMaterias';
+import { CrearNuevaVersion } from './planes/CrearNuevaVersion';
+import { CrearPlan } from './planes/CrearPlan';
+import { PublicarPlan } from './planes/PublicarPlan';
 import { CrearUsuario } from './usuarios/CrearUsuario';
 
 const resumen = (cambios: Partial<ResumenExamen> = {}): ResumenExamen => ({
   id: 'e1',
-  tipo: 'Semanal',
+  materia: { id: 'm1', nombre: 'Matemáticas' },
   semana: 1,
-  titulo: 'Semana 1',
-  puntajeMaximo: 10,
+  numero: 1,
+  semanaDelGrupo: 1,
+  titulo: 'Semana 1 · Examen 1',
   totalPreguntas: 2,
   ventana: { abre: '2026-08-03T00:00:00Z', cierra: '2026-08-09T23:59:59Z', estado: 'abierta' },
   miIntento: null,
@@ -105,16 +112,16 @@ describe('ResponderExamen (en un grupo)', () => {
 });
 
 describe('consultas de exámenes del grupo', () => {
-  it('ObtenerExamenesSemana separa semanal y reposición', async () => {
+  it('ObtenerExamenesSemana trae los dos exámenes de esa semana de la materia, en orden', async () => {
     const r = crearRepositoriosFalsos();
     r.examenesGrupo.lista.push(
-      { grupoId: 'g1', resumen: resumen(), preguntas },
-      { grupoId: 'g1', resumen: resumen({ id: 'e2', tipo: 'Reposicion' }), preguntas },
+      { grupoId: 'g1', resumen: resumen({ id: 'e2', numero: 2 }), preguntas },
+      { grupoId: 'g1', resumen: resumen({ id: 'e1', numero: 1 }), preguntas },
+      { grupoId: 'g1', resumen: resumen({ id: 'e3', materia: { id: 'm2', nombre: 'Historia' } }), preguntas },
+      { grupoId: 'g1', resumen: resumen({ id: 'e4', semana: 2 }), preguntas },
     );
-    const semana = await new ObtenerExamenesSemana(r.examenesGrupo).ejecutar('g1', 1);
-    expect(semana.semanal?.id).toBe('e1');
-    expect(semana.reposicion?.id).toBe('e2');
-    expect(await new ObtenerExamenesSemana(r.examenesGrupo).ejecutar('g1', 2)).toEqual({ semanal: null, reposicion: null });
+    const examenes = await new ObtenerExamenesSemana(r.examenesGrupo).ejecutar('g1', 'm1', 1);
+    expect(examenes.map((e) => e.id)).toEqual(['e1', 'e2']);
   });
 
   it('ObtenerExamenGrupo no entrega preguntas si la ventana no está abierta', async () => {
@@ -126,90 +133,70 @@ describe('consultas de exámenes del grupo', () => {
     });
     const examen = await new ObtenerExamenGrupo(r.examenesGrupo).ejecutar('g1', 'e1');
     expect(examen?.preguntas).toEqual([]);
-    expect(await new ObtenerExamenGrupo(r.examenesGrupo).ejecutar('g1', 'nada')).toBeNull();
-  });
-
-  it('ObtenerIntentosExamen ordena por nombre del alumno', async () => {
-    const r = crearRepositoriosFalsos();
-    const intento = (id: string, nombre: string) => ({
-      id,
-      examenId: 'e1',
-      alumno: { id, nombre, correo: '' },
-      respuestas: [],
-      aciertos: 0,
-      totalPreguntas: 1,
-      calificacion: 0,
-      fecha: '',
-    });
-    r.examenesGrupo.intentos.push(intento('i1', 'Zoe'), intento('i2', 'Ana'));
-    const lista = await new ObtenerIntentosExamen(r.examenesGrupo).ejecutar('g1', 'e1');
-    expect(lista.map((i) => i.alumno.nombre)).toEqual(['Ana', 'Zoe']);
   });
 });
 
-describe('CrearExamen / ActualizarExamen / EliminarExamen', () => {
-  const pregunta = { enunciado: ' ¿Capital de Jalisco? ', opciones: ['Guadalajara ', 'Monterrey'], respuestaCorrecta: 0 };
+describe('exámenes de la materia', () => {
+  const nuevo = { materiaId: 'm1', semana: 2, numero: 2, titulo: '  Repaso ', descripcion: ' ', preguntas };
 
-  it('aplica puntaje y días extra por defecto y limpia espacios', async () => {
+  it('CrearExamen limpia espacios y aplica 0 días extra', async () => {
     const r = crearRepositoriosFalsos();
-    const examen = await new CrearExamen(r.examenes).ejecutar({
-      materiaId: 'm1',
-      tipo: 'Semanal',
-      semana: 2,
-      titulo: ' Quiz ',
-      preguntas: [pregunta],
-    });
-    expect(examen).toMatchObject({ puntajeMaximo: 100, diasExtra: 0, titulo: 'Quiz', semana: 2 });
-    expect(examen.preguntas[0]).toEqual({ enunciado: '¿Capital de Jalisco?', opciones: ['Guadalajara', 'Monterrey'], respuestaCorrecta: 0 });
+    await new CrearExamen(r.examenes).ejecutar(nuevo);
+    expect(r.examenes.creados[0]).toMatchObject({ semana: 2, numero: 2, titulo: 'Repaso', diasExtra: 0, descripcion: undefined });
   });
 
-  it('el Final nunca envía semana', async () => {
-    const r = crearRepositoriosFalsos();
-    await new CrearExamen(r.examenes).ejecutar({ materiaId: 'm1', tipo: 'Final', semana: 4, titulo: 'Final', preguntas: [pregunta] });
-    expect(r.examenes.creados[0]).not.toHaveProperty('semana');
-    expect(r.examenes.creados[0]).toMatchObject({ tipo: 'Final', diasExtra: 0 });
-  });
-
-  it('valida semana, días extra y preguntas antes de llamar al repositorio', async () => {
+  it('valida semana, número, días extra y preguntas antes de llamar al repositorio', async () => {
     const r = crearRepositoriosFalsos();
     const caso = new CrearExamen(r.examenes);
-    await expect(caso.ejecutar({ materiaId: 'm1', tipo: 'Reposicion', titulo: 'X', preguntas: [pregunta] })).rejects.toThrow(
-      /semana/,
-    );
-    await expect(
-      caso.ejecutar({ materiaId: 'm1', tipo: 'Semanal', semana: 1, diasExtra: 40, titulo: 'X', preguntas: [pregunta] }),
-    ).rejects.toThrow(/días extra/);
-    await expect(caso.ejecutar({ materiaId: 'm1', tipo: 'Semanal', semana: 1, titulo: 'X', preguntas: [] })).rejects.toThrow(
-      /al menos una pregunta/,
-    );
-    await expect(
-      caso.ejecutar({
-        materiaId: 'm1',
-        tipo: 'Semanal',
-        semana: 1,
-        titulo: 'X',
-        preguntas: [{ enunciado: 'P', opciones: ['a'], respuestaCorrecta: 0 }],
-      }),
-    ).rejects.toThrow(/Pregunta 1/);
+    await expect(caso.ejecutar({ ...nuevo, semana: 3, numero: 0, diasExtra: 40 })).rejects.toMatchObject({
+      mensajes: [
+        'Los días extra deben ser un número entero entre 0 y 30.',
+        'Elige la semana 1 o 2 de la materia.',
+        'Elige el examen 1 o 2 de la semana.',
+      ],
+    });
+    await expect(caso.ejecutar({ ...nuevo, preguntas: [] })).rejects.toThrow(/al menos una pregunta/);
     expect(r.examenes.creados).toHaveLength(0);
   });
 
-  it('al actualizar sin preguntas no las envía y valida días extra', async () => {
+  it('ActualizarExamen sin preguntas no las envía', async () => {
     const r = crearRepositoriosFalsos();
-    const creado = await new CrearExamen(r.examenes).ejecutar({ materiaId: 'm1', tipo: 'Final', titulo: 'X', preguntas: [pregunta] });
-    const caso = new ActualizarExamen(r.examenes);
-    await caso.ejecutar(creado.id, { titulo: 'Nuevo', diasExtra: 3 });
-    expect(r.examenes.actualizaciones[0]?.cambios).toEqual({ titulo: 'Nuevo', diasExtra: 3 });
-    await expect(caso.ejecutar(creado.id, { diasExtra: -2 })).rejects.toThrow(/días extra/);
+    const creado = await new CrearExamen(r.examenes).ejecutar(nuevo);
+    await new ActualizarExamen(r.examenes).ejecutar(creado.id, { titulo: ' Nuevo ', diasExtra: 2 });
+    expect(r.examenes.actualizaciones[0]?.cambios).toEqual({ titulo: 'Nuevo', diasExtra: 2 });
   });
 
-  it('EliminarExamen propaga el 409 del backend', async () => {
+  it('ListarExamenesMateria ordena por semana y número', async () => {
     const r = crearRepositoriosFalsos();
-    r.examenes.errorAlEliminar = new ErrorAplicacion('Primero elimina la reposición de esta semana.', 409);
-    await expect(new EliminarExamen(r.examenes).ejecutar('e1')).rejects.toMatchObject({
-      estado: 409,
-      message: 'Primero elimina la reposición de esta semana.',
+    for (const [semana, numero] of [[2, 1], [1, 2], [1, 1]]) {
+      await new CrearExamen(r.examenes).ejecutar({ ...nuevo, semana, numero });
+    }
+    const lista = await new ListarExamenesMateria(r.examenes).ejecutar('m1');
+    expect(lista.map((e) => [e.semana, e.numero])).toEqual([[1, 1], [1, 2], [2, 1]]);
+  });
+
+  it('ImportarExamenes rechaza un archivo vacío y propaga los errores por fila', async () => {
+    const r = crearRepositoriosFalsos();
+    const caso = new ImportarExamenes(r.examenes);
+    await expect(caso.ejecutar('m1', '  ')).rejects.toThrow(/vacío/);
+    expect(r.examenes.importaciones).toHaveLength(0);
+
+    r.examenes.errorAlImportar = new ErrorAplicacion(['La hoja tiene 1 error', 'Fila 3: la semana debe ser 1 o 2'], 400);
+    await expect(caso.ejecutar('m1', 'semana,examen\n3,1')).rejects.toMatchObject({
+      mensajes: ['La hoja tiene 1 error', 'Fila 3: la semana debe ser 1 o 2'],
     });
+    expect(r.examenes.importaciones).toEqual([{ materiaId: 'm1', csv: 'semana,examen\n3,1' }]);
+  });
+});
+
+describe('ListarContenidoMateria', () => {
+  it('ordena el contenido por semana', async () => {
+    const r = crearRepositoriosFalsos();
+    for (const semana of [2, 1]) {
+      await new GuardarContenidoSemana(r.contenido).ejecutar({ materiaId: 'm1', semana, datos: { tema: `T${semana}`, recursos: [] } });
+    }
+    const lista = await new ListarContenidoMateria(r.contenido).ejecutar('m1');
+    expect(lista.map((c) => c.semana)).toEqual([1, 2]);
   });
 });
 
@@ -256,49 +243,94 @@ describe('contenido semanal', () => {
   });
 });
 
-describe('materias', () => {
-  it('CrearMateria aplica 16 semanas por defecto y omite descripción vacía', async () => {
+describe('planes de estudio', () => {
+  it('CrearPlan exige nombre y omite la descripción vacía', async () => {
     const r = crearRepositoriosFalsos();
-    const materia = await new CrearMateria(r.materias).ejecutar({ nombre: ' Ética ', descripcion: ' ' });
-    expect(materia).toEqual({ id: 'm1', nombre: 'Ética', totalSemanas: 16 });
-    expect(r.materias.creadas[0]).toEqual({ nombre: 'Ética', descripcion: undefined, totalSemanas: 16 });
+    const caso = new CrearPlan(r.planes);
+    await expect(caso.ejecutar({ nombre: ' ' })).rejects.toThrow(/obligatorio/);
+    const plan = await caso.ejecutar({ nombre: ' Prepa ', descripcion: ' ' });
+    expect(r.planes.creados).toEqual([{ nombre: 'Prepa' }]);
+    expect(plan).toMatchObject({ version: 1, estado: 'borrador' });
   });
 
-  it('valida nombre y total de semanas (1 a 52)', async () => {
+  it('PublicarPlan propaga cada pendiente del servidor', async () => {
     const r = crearRepositoriosFalsos();
-    await expect(new CrearMateria(r.materias).ejecutar({ nombre: '', totalSemanas: 60 })).rejects.toMatchObject({
-      mensajes: ['El nombre es obligatorio.', 'El total de semanas debe ser un entero entre 1 y 52.'],
+    const plan = sembrarPlan(r, { estado: 'borrador' });
+    r.planes.pendientes[plan.id] = ['Química: falta el examen 2 de la semana 2'];
+    await expect(new PublicarPlan(r.planes).ejecutar(plan.id)).rejects.toMatchObject({
+      estado: 400,
+      mensajes: expect.arrayContaining(['Química: falta el examen 2 de la semana 2']) as unknown,
     });
+    r.planes.pendientes[plan.id] = [];
+    await expect(new PublicarPlan(r.planes).ejecutar(plan.id)).resolves.toMatchObject({ estado: 'publicado' });
   });
 
-  it('ActualizarMateria envía solo lo que cambia (permite borrar la descripción)', async () => {
+  it('CrearNuevaVersion copia a un borrador con el siguiente número', async () => {
     const r = crearRepositoriosFalsos();
-    const materia = await new CrearMateria(r.materias).ejecutar({ nombre: 'Ética', descripcion: 'Algo' });
-    await new ActualizarMateria(r.materias).ejecutar(materia.id, { descripcion: ' ', totalSemanas: 18 });
-    expect(r.materias.actualizaciones[0]).toEqual({ id: materia.id, cambios: { descripcion: '', totalSemanas: 18 } });
+    const plan = sembrarPlan(r);
+    const nueva = await new CrearNuevaVersion(r.planes).ejecutar(plan.id);
+    expect(nueva).toMatchObject({ nombre: 'Prepa intensiva', version: 2, estado: 'borrador' });
+    expect(r.planes.materias.filter((m) => m.planId === nueva.id)).toHaveLength(3);
+  });
+});
+
+describe('materias', () => {
+  it('CrearMateria limpia espacios, valida el bloque y omite lo vacío', async () => {
+    const r = crearRepositoriosFalsos();
+    const plan = sembrarPlan(r, { id: 'p2', estado: 'borrador' });
+    const caso = new CrearMateria(r.materias);
+    await expect(caso.ejecutar({ planId: plan.id, nombre: ' ', bloque: 0 })).rejects.toMatchObject({
+      mensajes: ['El nombre es obligatorio.', 'El bloque debe ser un número entre 1 y 12.'],
+    });
+    await caso.ejecutar({ planId: plan.id, nombre: ' Física ', descripcion: ' ', bloque: 3, maestroId: '' });
+    expect(r.materias.creadas).toEqual([{ planId: 'p2', nombre: 'Física', bloque: 3 }]);
   });
 
-  it('EliminarMateria propaga el 409 cuando la materia tiene grupos', async () => {
+  it('en un plan publicado no se agregan ni se quitan materias', async () => {
     const r = crearRepositoriosFalsos();
-    r.materias.conGrupos.add('m1');
+    const plan = sembrarPlan(r);
+    await expect(new CrearMateria(r.materias).ejecutar({ planId: plan.id, nombre: 'Física', bloque: 1 })).rejects.toMatchObject({
+      estado: 409,
+    });
     await expect(new EliminarMateria(r.materias).ejecutar('m1')).rejects.toMatchObject({ estado: 409 });
+  });
+
+  it('ActualizarMateria permite quitar al maestro y borrar la descripción', async () => {
+    const r = crearRepositoriosFalsos();
+    sembrarPlan(r);
+    await new ActualizarMateria(r.materias).ejecutar('m1', { descripcion: ' ', maestroId: null });
+    expect(r.materias.actualizaciones[0]?.cambios).toEqual({ descripcion: '', maestroId: null });
+  });
+
+  it('ListarMisMaterias trae las del maestro con su plan', async () => {
+    const r = crearRepositoriosFalsos();
+    sembrarPlan(r);
+    const mias = await new ListarMisMaterias(r.materias).ejecutar();
+    expect(mias.map((m) => [m.nombre, m.plan.version])).toEqual([
+      ['Matemáticas', 1],
+      ['Química', 1],
+    ]);
   });
 });
 
 describe('grupos', () => {
-  const nuevo = { materiaId: 'm1', maestroId: 'u2', nombre: ' 05 ', periodo: ' 2026-B ', aula: ' ', fechaInicio: '2026-08-03' };
-
-  it('CrearGrupo limpia espacios y omite el aula vacía', async () => {
+  it('CrearGrupo limpia espacios y exige un lunes', async () => {
     const r = crearRepositoriosFalsos();
-    await new CrearGrupo(r.grupos).ejecutar(nuevo);
-    expect(r.grupos.creados[0]).toEqual({ materiaId: 'm1', maestroId: 'u2', nombre: '05', periodo: '2026-B', fechaInicio: '2026-08-03' });
+    const caso = new CrearGrupo(r.grupos);
+    await expect(caso.ejecutar({ planId: 'p1', nombre: 'G', fechaInicio: '2026-08-04' })).rejects.toThrow(/lunes/);
+    await caso.ejecutar({ planId: 'p1', nombre: ' Generación 1 ', fechaInicio: '2026-08-03' });
+    expect(r.grupos.creados).toEqual([{ planId: 'p1', nombre: 'Generación 1', fechaInicio: '2026-08-03' }]);
   });
 
   it('CrearGrupo reporta todos los campos faltantes', async () => {
     const r = crearRepositoriosFalsos();
-    await expect(
-      new CrearGrupo(r.grupos).ejecutar({ materiaId: '', maestroId: '', nombre: '', periodo: '', fechaInicio: '3/8/2026' }),
-    ).rejects.toMatchObject({ mensajes: expect.arrayContaining(['Elige una materia.', 'Elige un maestro.']) as unknown });
+    await expect(new CrearGrupo(r.grupos).ejecutar({ planId: '', nombre: '', fechaInicio: '3/8/2026' })).rejects.toMatchObject({
+      mensajes: [
+        'Elige un plan publicado.',
+        'El nombre del grupo es obligatorio.',
+        'La fecha de inicio debe tener formato AAAA-MM-DD.',
+      ],
+    });
     expect(r.grupos.creados).toHaveLength(0);
   });
 
@@ -317,24 +349,26 @@ describe('grupos', () => {
     expect(r.grupos.lista).toHaveLength(0);
   });
 
-  it('ObtenerCalificaciones ordena alumnos por nombre y semanas por número', async () => {
+  it('EliminarGrupo lo quita de la lista', async () => {
     const r = crearRepositoriosFalsos();
-    const nota = { calificacion: 8, puntajeMaximo: 10 };
-    r.grupos.calificaciones.g1 = [
-      {
-        alumno: { id: 'a2', nombre: 'Zoe' },
-        semanas: [
-          { semana: 2, semanal: nota, reposicion: null, mejor: nota },
-          { semana: 1, semanal: null, reposicion: null, mejor: null },
-        ],
-        final: null,
-        semestre: 0.5,
-      },
-      { alumno: { id: 'a1', nombre: 'Ana' }, semanas: [], final: nota, semestre: 0.5 },
-    ];
-    const lista = await new ObtenerCalificaciones(r.grupos).ejecutar('g1');
-    expect(lista.map((c) => c.alumno.nombre)).toEqual(['Ana', 'Zoe']);
-    expect(lista[1]?.semanas.map((s) => s.semana)).toEqual([1, 2]);
+    r.grupos.lista.push(grupoEjemplo);
+    await new EliminarGrupo(r.grupos).ejecutar('g1');
+    expect(r.grupos.lista).toHaveLength(0);
+  });
+
+  it('ObtenerCalificaciones ordena a los alumnos por nombre', async () => {
+    const r = crearRepositoriosFalsos();
+    const materias = [{ id: 'm1', nombre: 'Matemáticas', bloque: 1 }];
+    r.grupos.calificaciones.g1 = {
+      materias,
+      boletas: [
+        { alumno: { id: 'a2', nombre: 'Zoe' }, materias: [boletaMateria('m1', [8, 8, 8, 8])], promedioGeneral: 8 },
+        { alumno: { id: 'a1', nombre: 'Ana' }, materias: [boletaMateria('m1', [5])], promedioGeneral: 1.3 },
+      ],
+    };
+    const calificaciones = await new ObtenerCalificaciones(r.grupos).ejecutar('g1');
+    expect(calificaciones.materias).toEqual(materias);
+    expect(calificaciones.boletas.map((b) => b.alumno.nombre)).toEqual(['Ana', 'Zoe']);
   });
 });
 

@@ -1,14 +1,15 @@
-import type { Materia } from '../../domain/entities/Materia';
+import type { MateriaEnPlan } from '../../domain/entities/Materia';
 import type { MateriasRepository } from '../../domain/repositories/MateriasRepository';
 
-export class ListarMaterias {
+export class ObtenerMateria {
   private readonly materias: MateriasRepository;
 
   constructor(materias: MateriasRepository) {
     this.materias = materias;
   }
 
-  ejecutar(): Promise<Materia[]> {
-    return this.materias.listar();
+  /** null si no existe. */
+  ejecutar(id: string): Promise<MateriaEnPlan | null> {
+    return this.materias.obtener(id);
   }
 }

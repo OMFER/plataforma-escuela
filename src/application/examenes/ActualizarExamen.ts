@@ -1,7 +1,7 @@
 import type { CambiosExamen, Examen } from '../../domain/entities/Examen';
 import { ErrorAplicacion } from '../../domain/errors/ErrorAplicacion';
 import type { ExamenesRepository } from '../../domain/repositories/ExamenesRepository';
-import { validarDiasExtra, validarPuntajeMaximo } from '../../domain/rules/examen';
+import { validarDiasExtra } from '../../domain/rules/examen';
 import { asegurarPreguntasValidas, limpiarPreguntas } from './validarExamen';
 
 export class ActualizarExamen {
@@ -11,10 +11,10 @@ export class ActualizarExamen {
     this.examenes = examenes;
   }
 
-  /** Si `cambios.preguntas` es undefined, las preguntas no se tocan (evita 409 cuando ya hay intentos). */
+  /** Si `cambios.preguntas` es undefined, las preguntas no se tocan. */
   async ejecutar(id: string, cambios: CambiosExamen): Promise<Examen> {
     const limpio: CambiosExamen = { ...cambios };
-    const errores = [...validarDiasExtra(limpio.diasExtra), ...validarPuntajeMaximo(limpio.puntajeMaximo)];
+    const errores = validarDiasExtra(limpio.diasExtra);
     if (limpio.titulo !== undefined) {
       limpio.titulo = limpio.titulo.trim();
       if (!limpio.titulo) errores.push('El título es obligatorio.');
