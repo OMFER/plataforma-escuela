@@ -16,10 +16,9 @@ import {
   valoresInicialesExamen,
   type FormularioExamenValores,
 } from '../components/examen/esquemaExamen';
-import { APP_TEXTS, NOMBRE_TIPO_EXAMEN } from '../constants/textos';
+import { NOMBRE_TIPO_EXAMEN } from '../constants/textos';
 import { claves, useExamen, useExamenesGrupo, useIntentosExamen } from '../hooks/consultas';
 import { useGrupoDeRuta } from '../hooks/useParametrosGrupo';
-import { useBotonVolver } from '../providers/BotonVolverContext';
 import { useCasosDeUso } from '../providers/DependenciasContext';
 import { rutas } from '../routes/rutas';
 import { describirVentana } from '../utils/ventana';
@@ -50,11 +49,7 @@ export const EditorExamenPage = () => {
   } as const;
   const tipo = examen.data?.tipo ?? nuevo.tipo;
   const semana = examen.data?.semana ?? nuevo.semana;
-  const volver =
-    tipo === 'Final'
-      ? { ruta: rutas.inicio, texto: APP_TEXTS.nav.volverInicio }
-      : { ruta: rutas.semana(grupoId, semana), texto: APP_TEXTS.nav.volverSemana(semana) };
-  useBotonVolver(volver);
+  const volver = tipo === 'Final' ? rutas.inicio : rutas.semana(grupoId, semana);
   const resumen = resumenes.data?.find((e) => e.id === examenId);
   const avisoVisible = aviso ?? (location.state as EstadoNavegacion | null)?.aviso ?? null;
 
@@ -110,7 +105,7 @@ export const EditorExamenPage = () => {
                 alEliminar={() => eliminarExamen.ejecutar(examen.data?.id ?? '')}
                 alEliminado={() => {
                   void refrescarGrupos();
-                  navigate(volver.ruta);
+                  navigate(volver);
                 }}
               >
                 <p>
@@ -144,7 +139,7 @@ export const EditorExamenPage = () => {
             aviso={avisoVisible}
             guardando={guardado.isPending}
             alGuardar={(valores) => guardado.mutate(valores)}
-            alCancelar={() => navigate(volver.ruta)}
+            alCancelar={() => navigate(volver)}
           />
         )}
 

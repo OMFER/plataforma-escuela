@@ -5,10 +5,7 @@ import { EstadoVacio } from '../components/common/EstadoVacio';
 import { MensajeError } from '../components/common/MensajeError';
 import { useCalificaciones } from '../hooks/consultas';
 import { useGrupoDeRuta } from '../hooks/useParametrosGrupo';
-import { APP_TEXTS } from '../constants/textos';
-import { useBotonVolver } from '../providers/BotonVolverContext';
 import { useUsuarioActual } from '../providers/SesionContext';
-import { rutas } from '../routes/rutas';
 
 export const CalificacionesPage = () => {
   const usuario = useUsuarioActual();
@@ -16,7 +13,6 @@ export const CalificacionesPage = () => {
   const calificaciones = useCalificaciones(grupoId);
   const esAlumno = usuario.rol === 'alumno';
   const propias = calificaciones.data?.[0];
-  useBotonVolver({ ruta: rutas.inicio, texto: APP_TEXTS.nav.volverInicio });
 
   return (
     <main className="min-h-screen">

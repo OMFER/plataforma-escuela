@@ -13,6 +13,5 @@ export const estilos = {
     'inline-flex items-center justify-center gap-2 bg-error text-on-primary px-6 py-2.5 rounded-lg font-bold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed',
   botonIcono:
     'p-2 rounded-lg text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
-  enlaceVolver: 'text-primary text-body-sm flex items-center gap-1 hover:underline w-fit',
   etiqueta: 'block text-label-caps font-label-caps text-on-surface-variant uppercase mb-1.5',
 };

@@ -4,8 +4,9 @@ import { formatearFechaHora } from '../../utils/fechas';
 type EstadoOpcion = 'acertada' | 'correcta' | 'equivocada' | 'neutra';
 
 /**
- * La opción elegida se pinta según si el alumno acertó (aunque aún no se muestre la respuesta correcta);
- * la correcta, cuando ya se puede ver, también se resalta en verde.
+ * La opción elegida se pinta según si el alumno acertó (aunque aún no se muestre la respuesta correcta).
+ * Si se equivocó, la correcta (cuando ya se puede ver) solo se señala con su etiqueta:
+ * el verde y la palomita quedan para lo que el alumno sí acertó.
  */
 const estadoOpcion = (esCorrecta: boolean, esElegida: boolean, acierto: boolean): EstadoOpcion => {
   if (esElegida) return acierto ? 'acertada' : 'equivocada';
@@ -15,7 +16,7 @@ const estadoOpcion = (esCorrecta: boolean, esElegida: boolean, acierto: boolean)
 /** `color` pinta el ícono, el texto de la opción y sus etiquetas. */
 const ESTILOS: Record<EstadoOpcion, { borde: string; icono: string; color: string; texto: string }> = {
   acertada: { borde: 'border-exito bg-exito-container/60', icono: 'check_circle', color: 'text-exito', texto: 'text-exito font-semibold' },
-  correcta: { borde: 'border-exito bg-exito-container/60', icono: 'check_circle', color: 'text-exito', texto: 'text-exito font-semibold' },
+  correcta: { borde: 'border-primary', icono: 'radio_button_unchecked', color: 'text-primary', texto: 'text-on-surface font-semibold' },
   equivocada: { borde: 'border-error bg-error-container/40', icono: 'cancel', color: 'text-error', texto: 'text-on-surface' },
   neutra: { borde: 'border-outline-variant', icono: 'radio_button_unchecked', color: 'text-outline', texto: 'text-on-surface' },
 };
@@ -43,7 +44,8 @@ const OpcionRevisada = ({ texto, esCorrecta, esElegida, acierto }: OpcionRevisad
       {esElegida && (
         <span className={`text-[12px] font-bold uppercase ${estado === 'acertada' ? 'text-exito' : 'text-on-surface-variant'}`}>Tu respuesta</span>
       )}
-      {esCorrecta && <span className="text-[12px] font-bold uppercase text-exito">Respuesta correcta</span>}
+      {/* Si la eligió y acertó, "✓ Correcta" ya lo dice: no se repite la etiqueta. */}
+      {estado === 'correcta' && <span className={`text-[12px] font-bold uppercase ${estilo.color}`}>Respuesta correcta</span>}
     </li>
   );
 };
