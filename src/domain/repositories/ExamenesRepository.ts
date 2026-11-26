@@ -1,10 +1,14 @@
 import type { CambiosExamen, Examen, NuevoExamen } from '../entities/Examen';
 
-/** Plantillas de examen de la materia (edición del maestro). */
+/** Exámenes de la materia, con sus respuestas (edición del maestro asignado o del admin). */
 export interface ExamenesRepository {
   obtenerPorId(id: string): Promise<Examen | null>;
+  listarPorMateria(materiaId: string): Promise<Examen[]>;
+  /** Solo en un plan en borrador. */
   crear(datos: NuevoExamen): Promise<Examen>;
   actualizar(id: string, cambios: CambiosExamen): Promise<Examen>;
-  /** Falla con 409 si es un Semanal que tiene Reposición. */
+  /** Solo en un plan en borrador. */
   eliminar(id: string): Promise<void>;
+  /** Importa el CSV de la plantilla; si tiene errores no guarda nada y los devuelve por fila. */
+  importar(materiaId: string, csv: string): Promise<Examen[]>;
 }

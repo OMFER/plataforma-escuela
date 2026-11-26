@@ -1,12 +1,13 @@
 import {
   DIAS_EXTRA_MAX,
+  ESCALA_CALIFICACION,
   MAX_OPCIONES,
   MIN_OPCIONES,
   type PreguntaNueva,
   type PreguntaRevisada,
   type PreguntaVista,
-  type TipoExamen,
 } from '../entities/Examen';
+import { EXAMENES_POR_SEMANA, SEMANAS_POR_MATERIA } from '../entities/Plan';
 
 export type Respuestas = ReadonlyArray<number | null | undefined>;
 
@@ -19,40 +20,29 @@ export const estanTodasRespondidas = (respuestas: Respuestas, totalPreguntas: nu
 export const contarRespondidas = (respuestas: Respuestas): number =>
   respuestas.filter((r) => typeof r === 'number' && r >= 0).length;
 
-const redondear = (n: number): number => Math.round(n * 100) / 100;
+/** "8.5 / 10". */
+export const formatearCalificacion = (calificacion: number): string =>
+  `${Math.round(calificacion * 100) / 100} / ${ESCALA_CALIFICACION}`;
 
-export const formatearCalificacion = (calificacion: number, puntajeMaximo: number): string =>
-  `${redondear(calificacion)} / ${puntajeMaximo}`;
+/** "Semana 2 · Examen 1". */
+export const nombreDeExamen = (semana: number, numero: number): string => `Semana ${semana} · Examen ${numero}`;
 
-/** Semanal y Reposición pertenecen a una semana; el Final no. */
-export const usaSemana = (tipo: TipoExamen): boolean => tipo !== 'Final';
+/** Las semanas de una materia y los exámenes de cada una: [[1,1],[1,2],[2,1],[2,2]]. */
+export const casillasDeExamen = (): { semana: number; numero: number }[] =>
+  Array.from({ length: SEMANAS_POR_MATERIA }, (_, s) =>
+    Array.from({ length: EXAMENES_POR_SEMANA }, (_, n) => ({ semana: s + 1, numero: n + 1 })),
+  ).flat();
 
-export interface ConfiguracionExamen {
-  tipo: TipoExamen;
-  semana?: number;
-  diasExtra?: number;
-  puntajeMaximo?: number;
-}
+export const esSemanaDeMateria = (semana: number): boolean =>
+  Number.isInteger(semana) && semana >= 1 && semana <= SEMANAS_POR_MATERIA;
+
+export const esNumeroDeExamen = (numero: number): boolean =>
+  Number.isInteger(numero) && numero >= 1 && numero <= EXAMENES_POR_SEMANA;
 
 export const validarDiasExtra = (diasExtra?: number): string[] =>
   diasExtra === undefined || (Number.isInteger(diasExtra) && diasExtra >= 0 && diasExtra <= DIAS_EXTRA_MAX)
     ? []
     : [`Los días extra deben ser un número entero entre 0 y ${DIAS_EXTRA_MAX}.`];
-
-export const validarPuntajeMaximo = (puntajeMaximo?: number): string[] =>
-  puntajeMaximo === undefined || puntajeMaximo > 0 ? [] : ['El puntaje máximo debe ser mayor a 0.'];
-
-/** Semana obligatoria salvo en el Final (donde está prohibida), días extra entre 0 y 30 y puntaje positivo. */
-export const validarConfiguracionExamen = ({ tipo, semana, diasExtra, puntajeMaximo }: ConfiguracionExamen): string[] => {
-  const errores: string[] = [];
-  if (usaSemana(tipo)) {
-    if (semana === undefined || !Number.isInteger(semana) || semana < 1) errores.push('Elige la semana del examen.');
-  } else if (semana !== undefined) {
-    errores.push('El examen final no lleva semana.');
-  }
-  errores.push(...validarDiasExtra(diasExtra), ...validarPuntajeMaximo(puntajeMaximo));
-  return errores;
-};
 
 /** Devuelve la lista de problemas de una pregunta (vacía si es válida). */
 export const validarPregunta = (pregunta: PreguntaNueva): string[] => {
@@ -72,11 +62,10 @@ export const validarPregunta = (pregunta: PreguntaNueva): string[] => {
   return errores;
 };
 
+type PreguntaComparable = Pick<PreguntaNueva, 'enunciado' | 'opciones'> & { respuestaCorrecta?: number };
+
 /** Compara dos listas de preguntas (enunciado, opciones y respuesta correcta). */
-export const preguntasIguales = (
-  a: ReadonlyArray<Pick<PreguntaNueva, 'enunciado' | 'opciones'> & { respuestaCorrecta?: number }>,
-  b: ReadonlyArray<Pick<PreguntaNueva, 'enunciado' | 'opciones'> & { respuestaCorrecta?: number }>,
-): boolean =>
+export const preguntasIguales = (a: ReadonlyArray<PreguntaComparable>, b: ReadonlyArray<PreguntaComparable>): boolean =>
   a.length === b.length &&
   a.every((p, i) => {
     const q = b[i];
@@ -87,6 +76,20 @@ export const preguntasIguales = (
       p.opciones.length === q.opciones.length &&
       p.opciones.every((o, j) => o.trim() === q.opciones[j]?.trim())
     );
+  });
+
+/**
+ * Con respuestas registradas solo se corrige la redacción: mismas preguntas, mismo número de
+ * opciones y la misma respuesta correcta (la misma regla que aplica el servidor).
+ */
+export const esCorreccionDeTexto = (
+  antes: ReadonlyArray<PreguntaComparable>,
+  despues: ReadonlyArray<PreguntaComparable>,
+): boolean =>
+  antes.length === despues.length &&
+  antes.every((p, i) => {
+    const q = despues[i];
+    return q !== undefined && p.opciones.length === q.opciones.length && p.respuestaCorrecta === q.respuestaCorrecta;
   });
 
 const esRevisada = (p: PreguntaVista): p is PreguntaRevisada =>

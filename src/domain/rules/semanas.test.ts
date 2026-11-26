@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { describirAvance, faseDelCurso, formatearRangoSemana, porcentajeAvance, semanaSugerida } from './semanas';
+import {
+  agruparPorBloque,
+  bloqueDeSemana,
+  describirAvance,
+  describirBloque,
+  faseDelCurso,
+  formatearRangoSemana,
+  materiasDeSemana,
+  porcentajeAvance,
+  semanaDeMateria,
+  semanaDelGrupo,
+  semanaSugerida,
+} from './semanas';
 
 describe('formatearRangoSemana', () => {
   it('usa formato corto cuando el rango está en el mismo mes', () => {
@@ -47,5 +59,35 @@ describe('avance del curso', () => {
     expect(semanaSugerida(0, 16)).toBe(1);
     expect(semanaSugerida(7, 16)).toBe(7);
     expect(semanaSugerida(17, 16)).toBe(16);
+  });
+});
+
+describe('bloques de materias', () => {
+  const grupo = {
+    materias: [
+      { id: 'a', planId: 'p', nombre: 'A', bloque: 1 },
+      { id: 'b', planId: 'p', nombre: 'B', bloque: 1 },
+      { id: 'c', planId: 'p', nombre: 'C', bloque: 2 },
+    ],
+  };
+
+  it('cada bloque dura dos semanas del grupo', () => {
+    expect([1, 2, 3, 4, 5].map(bloqueDeSemana)).toEqual([1, 1, 2, 2, 3]);
+    expect([1, 2, 3, 4].map(semanaDeMateria)).toEqual([1, 2, 1, 2]);
+    expect(semanaDelGrupo(3, 2)).toBe(6);
+    expect(describirBloque(2)).toBe('Semanas 3 y 4');
+  });
+
+  it('en cada semana se cursan las materias de su bloque', () => {
+    expect(materiasDeSemana(grupo, 2).map((m) => m.id)).toEqual(['a', 'b']);
+    expect(materiasDeSemana(grupo, 3).map((m) => m.id)).toEqual(['c']);
+    expect(materiasDeSemana(grupo, 5)).toEqual([]);
+  });
+
+  it('agrupa por bloque en orden', () => {
+    expect(agruparPorBloque([...grupo.materias].reverse()).map((b) => [b.bloque, b.materias.map((m) => m.id)])).toEqual([
+      [1, ['b', 'a']],
+      [2, ['c']],
+    ]);
   });
 });

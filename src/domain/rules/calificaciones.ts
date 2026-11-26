@@ -1,19 +1,17 @@
-import type { CalificacionesAlumno, Nota } from '../entities/Calificaciones';
-import { formatearCalificacion } from './examen';
+import { CALIFICACION_APROBATORIA, type BoletaAlumno, type BoletaMateria } from '../entities/Calificaciones';
 
-export const porcentajeNota = (nota: Nota): number =>
-  nota.puntajeMaximo > 0 ? (nota.calificacion / nota.puntajeMaximo) * 100 : 0;
+/** "8.5", "10" o "—" si no hay calificación. */
+export const formatearNota = (calificacion: number | null | undefined): string =>
+  calificacion === null || calificacion === undefined ? '—' : String(Math.round(calificacion * 10) / 10);
 
-/** La mejor de dos notas en porcentaje (en empate, la primera). */
-export const mejorNota = (a: Nota | null, b: Nota | null): Nota | null => {
-  if (!a) return b;
-  if (!b) return a;
-  return porcentajeNota(b) > porcentajeNota(a) ? b : a;
+export const estaAprobada = (promedio: number): boolean => promedio >= CALIFICACION_APROBATORIA;
+
+/** Boleta del alumno para una materia (por id), si viene en su lista. */
+export const boletaDeMateria = (boleta: BoletaAlumno | undefined, materiaId: string): BoletaMateria | undefined =>
+  boleta?.materias.find((m) => m.materiaId === materiaId);
+
+/** "Aprobada", "Reprobada" o "En curso" (aún le faltan exámenes por presentar). */
+export const situacionDeMateria = (boleta: BoletaMateria): 'aprobada' | 'reprobada' | 'en-curso' => {
+  if (!boleta.completa) return 'en-curso';
+  return boleta.aprobada ? 'aprobada' : 'reprobada';
 };
-
-export const formatearNota = (nota: Nota | null): string =>
-  nota ? formatearCalificacion(nota.calificacion, nota.puntajeMaximo) : '—';
-
-/** Semanas presentes en cualquier alumno, ordenadas (columnas de la tabla del maestro). */
-export const semanasCalificadas = (calificaciones: CalificacionesAlumno[]): number[] =>
-  [...new Set(calificaciones.flatMap((c) => c.semanas.map((s) => s.semana)))].sort((a, b) => a - b);

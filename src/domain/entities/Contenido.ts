@@ -9,8 +9,8 @@ export interface Recurso {
 }
 
 export interface LinksClase {
+  /** Clase grabada (Drive de la escuela, Zoom, Meet…). */
   grabacion?: string;
-  enVivo?: string;
   presentacion?: string;
   descGrabacion?: string;
 }
@@ -18,12 +18,12 @@ export interface LinksClase {
 export interface ContenidoSemana {
   id: string;
   materiaId: string;
+  /** Semana de la materia (1 o 2). */
   semana: number;
   tema: string;
   introduccion?: string;
   recursos: Recurso[];
   links?: LinksClase;
-  fechaEnVivo?: string;
 }
 
 export interface CambiosContenidoSemana {

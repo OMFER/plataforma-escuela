@@ -1,13 +1,8 @@
-export const TIPOS_EXAMEN = ['Semanal', 'Reposicion', 'Final'] as const;
-export type TipoExamen = (typeof TIPOS_EXAMEN)[number];
-
-export const esTipoExamen = (valor: unknown): valor is TipoExamen =>
-  typeof valor === 'string' && (TIPOS_EXAMEN as readonly string[]).includes(valor);
-
 export const MIN_OPCIONES = 2;
 export const MAX_OPCIONES = 6;
-export const PUNTAJE_MAXIMO_POR_DEFECTO = 100;
 export const DIAS_EXTRA_MAX = 30;
+/** Cada examen se califica sobre 10. */
+export const ESCALA_CALIFICACION = 10;
 
 export type EstadoVentana = 'proxima' | 'abierta' | 'cerrada';
 
@@ -28,34 +23,36 @@ export interface Pregunta extends PreguntaNueva {
   id?: string;
 }
 
-/** Plantilla del examen dentro de la materia (con respuestas; solo maestro/admin). */
+/**
+ * Plantilla del examen en la materia (con respuestas; solo su maestro y el admin).
+ * Hay dos por semana de la materia: el 1 abre el lunes y el 2 el jueves; los dos cuentan.
+ */
 export interface Examen {
   id: string;
   materiaId: string;
-  tipo: TipoExamen;
-  /** Solo Semanal y Reposicion. */
-  semana?: number;
+  /** Semana de la materia (1 o 2). */
+  semana: number;
+  /** Examen 1 o 2 de la semana. */
+  numero: number;
   titulo: string;
   descripcion?: string;
-  puntajeMaximo: number;
   diasExtra: number;
   preguntas: Pregunta[];
-  /** Si algún alumno, de cualquier grupo, ya lo respondió: preguntas y puntaje ya no cambian. */
+  /** Si algún alumno ya lo respondió: solo se puede corregir la redacción de las preguntas. */
   tieneRespuestas?: boolean;
 }
 
 export interface CambiosExamen {
   titulo?: string;
   descripcion?: string;
-  puntajeMaximo?: number;
   diasExtra?: number;
   preguntas?: PreguntaNueva[];
 }
 
 export interface NuevoExamen extends CambiosExamen {
   materiaId: string;
-  tipo: TipoExamen;
-  semana?: number;
+  semana: number;
+  numero: number;
   titulo: string;
   preguntas: PreguntaNueva[];
 }
@@ -63,27 +60,25 @@ export interface NuevoExamen extends CambiosExamen {
 export interface ResultadoIntento {
   aciertos: number;
   totalPreguntas: number;
+  /** Sobre 10. */
   calificacion: number;
   fecha: string;
 }
 
-/** Examen visto desde un grupo: su ventana y, para el alumno, su intento. */
+/** Examen visto desde un grupo: su materia, su ventana y, para el alumno, su intento. */
 export interface ResumenExamen {
   id: string;
-  tipo: TipoExamen;
-  semana?: number;
+  materia: { id: string; nombre: string };
+  semana: number;
+  numero: number;
+  /** Semana del grupo en la que se presenta. */
+  semanaDelGrupo: number;
   titulo: string;
   descripcion?: string;
-  puntajeMaximo: number;
   totalPreguntas: number;
   ventana: Ventana;
   /** Solo para el alumno: null si aún no responde. */
   miIntento?: ResultadoIntento | null;
-}
-
-export interface ExamenesSemana {
-  semanal: ResumenExamen | null;
-  reposicion: ResumenExamen | null;
 }
 
 /** Pregunta tal como la entrega el grupo: los campos de revisión llegan solo cuando corresponde. */
@@ -114,15 +109,4 @@ export interface ResultadoConRevision extends ResultadoIntento {
   revision: PreguntaRevisada[];
   /** Ventana del examen en el grupo: las respuestas correctas se muestran a partir de `cierra`. */
   ventana?: Ventana;
-}
-
-export interface IntentoAlumno {
-  id: string;
-  examenId: string;
-  alumno: { id: string; nombre: string; correo: string };
-  respuestas: number[];
-  aciertos: number;
-  totalPreguntas: number;
-  calificacion: number;
-  fecha: string;
 }

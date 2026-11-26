@@ -1,10 +1,10 @@
-import type { ExamenGrupo, ExamenesSemana, IntentoAlumno, ResultadoConRevision, ResumenExamen } from '../entities/Examen';
+import type { ExamenGrupo, ResultadoConRevision, ResumenExamen } from '../entities/Examen';
 
-/** Exámenes de la materia vistos desde un grupo: ventanas, respuestas e intentos. */
+/** Exámenes del plan vistos desde un grupo: ventanas, respuestas e intentos. */
 export interface ExamenesGrupoRepository {
   listar(grupoId: string): Promise<ResumenExamen[]>;
-  obtenerPorSemana(grupoId: string, semana: number): Promise<ExamenesSemana>;
+  /** Los dos exámenes de una semana (1 o 2) de una materia. */
+  obtenerDeSemana(grupoId: string, materiaId: string, semana: number): Promise<ResumenExamen[]>;
   obtener(grupoId: string, examenId: string): Promise<ExamenGrupo | null>;
   responder(grupoId: string, examenId: string, respuestas: number[]): Promise<ResultadoConRevision>;
-  obtenerIntentos(grupoId: string, examenId: string): Promise<IntentoAlumno[]>;
 }

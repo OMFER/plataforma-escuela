@@ -3,10 +3,11 @@ import {
   contarRespondidas,
   estanTodasRespondidas,
   formatearCalificacion,
+  casillasDeExamen,
+  esCorreccionDeTexto,
   preguntasIguales,
   revisionDe,
-  usaSemana,
-  validarConfiguracionExamen,
+  validarDiasExtra,
   validarPregunta,
 } from './examen';
 import { esUrlHttp } from './urls';
@@ -27,9 +28,34 @@ describe('estanTodasRespondidas', () => {
 });
 
 describe('formatearCalificacion', () => {
-  it('redondea a dos decimales', () => {
-    expect(formatearCalificacion(66.66666, 100)).toBe('66.67 / 100');
-    expect(formatearCalificacion(10, 10)).toBe('10 / 10');
+  it('muestra la calificación sobre 10 con hasta dos decimales', () => {
+    expect(formatearCalificacion(6.66666)).toBe('6.67 / 10');
+    expect(formatearCalificacion(10)).toBe('10 / 10');
+  });
+});
+
+describe('casillas de examen', () => {
+  it('dos semanas con dos exámenes cada una', () => {
+    expect(casillasDeExamen()).toEqual([
+      { semana: 1, numero: 1 },
+      { semana: 1, numero: 2 },
+      { semana: 2, numero: 1 },
+      { semana: 2, numero: 2 },
+    ]);
+  });
+});
+
+describe('esCorreccionDeTexto', () => {
+  const antes = [{ enunciado: '¿Color?', opciones: ['Rojo', 'Azul'], respuestaCorrecta: 1 }];
+
+  it('acepta cambios de redacción', () => {
+    expect(esCorreccionDeTexto(antes, [{ enunciado: '¿De qué color?', opciones: ['Rojo', 'Azul cielo'], respuestaCorrecta: 1 }])).toBe(true);
+  });
+
+  it('rechaza cambiar la respuesta, las opciones o las preguntas', () => {
+    expect(esCorreccionDeTexto(antes, [{ ...antes[0], respuestaCorrecta: 0 }])).toBe(false);
+    expect(esCorreccionDeTexto(antes, [{ ...antes[0], opciones: ['Rojo', 'Azul', 'Verde'] }])).toBe(false);
+    expect(esCorreccionDeTexto(antes, [...antes, ...antes])).toBe(false);
   });
 });
 
@@ -65,22 +91,13 @@ describe('esUrlHttp', () => {
   });
 });
 
-describe('validarConfiguracionExamen', () => {
-  it('exige semana en Semanal y Reposición y la prohíbe en el Final', () => {
-    expect(usaSemana('Semanal')).toBe(true);
-    expect(usaSemana('Final')).toBe(false);
-    expect(validarConfiguracionExamen({ tipo: 'Semanal', semana: 2 })).toEqual([]);
-    expect(validarConfiguracionExamen({ tipo: 'Reposicion' })).toEqual(['Elige la semana del examen.']);
-    expect(validarConfiguracionExamen({ tipo: 'Final', semana: 3 })).toEqual(['El examen final no lleva semana.']);
-    expect(validarConfiguracionExamen({ tipo: 'Final' })).toEqual([]);
-  });
-
-  it('limita los días extra a enteros entre 0 y 30 y el puntaje a positivos', () => {
-    expect(validarConfiguracionExamen({ tipo: 'Final', diasExtra: 30, puntajeMaximo: 10 })).toEqual([]);
-    expect(validarConfiguracionExamen({ tipo: 'Final', diasExtra: 31 })).toHaveLength(1);
-    expect(validarConfiguracionExamen({ tipo: 'Final', diasExtra: -1 })).toHaveLength(1);
-    expect(validarConfiguracionExamen({ tipo: 'Final', diasExtra: 1.5 })).toHaveLength(1);
-    expect(validarConfiguracionExamen({ tipo: 'Final', puntajeMaximo: 0 })).toEqual(['El puntaje máximo debe ser mayor a 0.']);
+describe('validarDiasExtra', () => {
+  it('acepta de 0 a 30 días enteros', () => {
+    expect(validarDiasExtra(undefined)).toEqual([]);
+    expect(validarDiasExtra(30)).toEqual([]);
+    expect(validarDiasExtra(31)).toHaveLength(1);
+    expect(validarDiasExtra(-1)).toHaveLength(1);
+    expect(validarDiasExtra(1.5)).toHaveLength(1);
   });
 });
 
