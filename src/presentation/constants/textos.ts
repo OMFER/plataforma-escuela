@@ -10,8 +10,6 @@ export const APP_TEXTS = {
     logout: 'Cerrar sesión',
     abrirMenu: 'Mostrar menú',
     cerrarMenu: 'Ocultar menú',
-    volverInicio: 'Volver al inicio',
-    volverSemana: (semana: number) => `Volver a la semana ${semana}`,
     irInicio: 'Ir al inicio',
     opcionesCuenta: 'opciones de la cuenta',
   },

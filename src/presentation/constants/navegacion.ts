@@ -17,3 +17,9 @@ export const navegacionPorRol = (rol: Rol): ElementoNavegacion[] => NAVEGACION[r
 
 /** id del menú lateral, para que el botón de hamburguesa lo referencie (aria-controls). */
 export const ID_MENU_LATERAL = 'menu-lateral';
+
+/**
+ * El menú lateral (con su botón de hamburguesa) está apagado por ahora.
+ * Su código se conserva: para volver a mostrarlo basta con cambiar esto a `true`.
+ */
+export const MENU_LATERAL_HABILITADO = false;

@@ -166,15 +166,14 @@ describe('home', () => {
 });
 
 describe('layout', () => {
-  it('en la semana el header muestra la materia y el regreso al inicio', async () => {
+  it('en la semana el header muestra la materia y ningún botón volver', async () => {
     renderApp('/grupos/g1/semanas/2', { sesion: sesionAlumno, preparar: (r) => r.grupos.lista.push(grupoEjemplo) });
     const header = await screen.findByRole('banner');
     expect(await within(header).findByText(grupoEjemplo.materia.nombre)).toBeInTheDocument();
-    expect(await within(header).findByRole('link', { name: 'Volver al inicio' })).toHaveAttribute('href', '/');
-    expect(screen.getAllByRole('link', { name: 'Volver al inicio' })).toHaveLength(1);
+    expect(screen.queryByRole('link', { name: /Volver/ })).not.toBeInTheDocument();
   });
 
-  it('en el examen el botón volver va en el header (y no dentro de la pantalla)', async () => {
+  it('en el examen no hay botón volver', async () => {
     renderApp('/grupos/g1/examenes/e1', {
       sesion: sesionAlumno,
       preparar: (r) => {
@@ -182,22 +181,13 @@ describe('layout', () => {
         r.examenesGrupo.lista.push({ grupoId: 'g1', resumen: resumenExamen(), preguntas: preguntasEjemplo });
       },
     });
-    const header = await screen.findByRole('banner');
-    expect(await within(header).findByRole('link', { name: 'Volver a la semana 2' })).toHaveAttribute('href', '/grupos/g1/semanas/2');
-    expect(within(screen.getByRole('main')).queryByRole('link', { name: /Volver/ })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Quiz semana 2' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Volver/ })).not.toBeInTheDocument();
   });
 
-  it('en calificaciones el botón volver va en el header', async () => {
-    renderApp('/grupos/g1/calificaciones', { sesion: sesionAlumno, preparar: (r) => r.grupos.lista.push(grupoEjemplo) });
-    const header = await screen.findByRole('banner');
-    expect(await within(header).findByRole('link', { name: 'Volver al inicio' })).toHaveAttribute('href', '/');
-    expect(within(screen.getByRole('main')).queryByRole('link', { name: /Volver/ })).not.toBeInTheDocument();
-  });
-
-  it('fuera de un grupo el header no muestra materia ni regreso', async () => {
+  it('fuera de un grupo el header no muestra la materia', async () => {
     renderApp('/', { sesion: sesionAlumno, preparar: (r) => r.grupos.lista.push(grupoEjemplo) });
     const header = await screen.findByRole('banner');
-    expect(within(header).queryByRole('link', { name: 'Volver al inicio' })).not.toBeInTheDocument();
     expect(within(header).queryByText(grupoEjemplo.materia.nombre)).not.toBeInTheDocument();
   });
 
@@ -206,43 +196,27 @@ describe('layout', () => {
     renderApp('/grupos/g1/semanas/2', { sesion: sesionAlumno, preparar: (r) => r.grupos.lista.push(grupoEjemplo) });
     const header = await screen.findByRole('banner');
     vi.mocked(window.scrollTo).mockClear();
-    await usuario.click(await within(header).findByRole('link', { name: 'Volver al inicio' }));
+    await usuario.click(await within(header).findByRole('link', { name: /CES Ipalnemohuani/ }));
     expect(await screen.findByRole('heading', { name: /¡Hola/ })).toBeInTheDocument();
     expect(window.scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }));
   });
 
-  it('el botón de hamburguesa vive en el menú lateral abierto y en el header cuando está oculto', async () => {
-    const usuario = userEvent.setup();
+  it('el menú lateral y su botón de hamburguesa están apagados', async () => {
     renderApp('/', { sesion: sesionAlumno });
-    const menu = () => document.getElementById('menu-lateral')!;
     const header = await screen.findByRole('banner');
-
-    const ocultar = await within(menu()).findByRole('button', { name: 'Ocultar menú' });
-    expect(ocultar).toHaveAttribute('aria-expanded', 'true');
+    expect(document.getElementById('menu-lateral')).not.toBeInTheDocument();
     expect(within(header).queryByRole('button', { name: /menú/ })).not.toBeInTheDocument();
-    expect(menu()).toHaveClass('flex');
-
-    await usuario.click(ocultar);
-    expect(menu()).toHaveClass('hidden');
-    const mostrar = within(header).getByRole('button', { name: 'Mostrar menú' });
-    expect(mostrar).toHaveAttribute('aria-expanded', 'false');
-
-    await usuario.click(mostrar);
-    expect(menu()).toHaveClass('flex');
   });
 
-  it('el logo va al inicio y aparece en el header solo con el menú oculto', async () => {
+  it('el logo va hasta la izquierda del header y lleva al inicio', async () => {
     const usuario = userEvent.setup();
     renderApp('/grupos/g1/semanas/2', { sesion: sesionAlumno, preparar: (r) => r.grupos.lista.push(grupoEjemplo) });
     const header = await screen.findByRole('banner');
-    const menu = document.getElementById('menu-lateral')!;
 
-    expect(within(menu).getByRole('link', { name: /CES Ipalnemohuani/ })).toHaveAttribute('href', '/');
-    expect(within(header).queryByRole('link', { name: /CES Ipalnemohuani/ })).not.toBeInTheDocument();
-
-    await usuario.click(within(menu).getByRole('button', { name: 'Ocultar menú' }));
     const logo = within(header).getByRole('link', { name: /CES Ipalnemohuani/ });
     expect(logo).toHaveAttribute('href', '/');
+    // Es lo primero del header, antes del menú del usuario.
+    expect(within(header).getAllByRole('link')[0]).toBe(logo);
     await usuario.click(logo);
     expect(await screen.findByRole('heading', { name: /¡Hola/ })).toBeInTheDocument();
   });

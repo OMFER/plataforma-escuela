@@ -10,10 +10,8 @@ import { estilos } from '../components/common/estilos';
 import { FormularioRespuestas } from '../components/examen/FormularioRespuestas';
 import { ResultadoExamen } from '../components/examen/ResultadoExamen';
 import { RevisionExamen } from '../components/examen/RevisionExamen';
-import { APP_TEXTS, NOMBRE_TIPO_EXAMEN } from '../constants/textos';
-import { useBotonVolver } from '../providers/BotonVolverContext';
+import { NOMBRE_TIPO_EXAMEN } from '../constants/textos';
 import { useExamenGrupo } from '../hooks/consultas';
-import { rutas } from '../routes/rutas';
 import { formatearFechaHora } from '../utils/fechas';
 import { irArribaDeLaPagina } from '../utils/scroll';
 import { describirVentana } from '../utils/ventana';
@@ -95,12 +93,6 @@ const ContenidoExamen = ({ grupoId, examen, alRecargar }: ContenidoExamenProps) 
 export const ExamenPage = () => {
   const { grupoId = '', examenId = '' } = useParams<{ grupoId: string; examenId: string }>();
   const { data: examen, isPending, error, refetch } = useExamenGrupo(grupoId, examenId);
-
-  useBotonVolver(
-    examen?.semana
-      ? { ruta: rutas.semana(grupoId, examen.semana), texto: APP_TEXTS.nav.volverSemana(examen.semana) }
-      : { ruta: rutas.inicio, texto: APP_TEXTS.nav.volverInicio },
-  );
 
   return (
     <main className="min-h-screen">

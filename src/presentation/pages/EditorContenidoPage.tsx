@@ -8,8 +8,6 @@ import { FormularioContenido } from '../components/contenido/FormularioContenido
 import { aCambiosContenido, type FormularioContenidoValores } from '../components/contenido/esquemaContenido';
 import { claves, useContenidoSemana } from '../hooks/consultas';
 import { useParametrosSemana } from '../hooks/useParametrosGrupo';
-import { APP_TEXTS } from '../constants/textos';
-import { useBotonVolver } from '../providers/BotonVolverContext';
 import { useCasosDeUso } from '../providers/DependenciasContext';
 import { rutas } from '../routes/rutas';
 
@@ -20,7 +18,6 @@ export const EditorContenidoPage = () => {
   const navigate = useNavigate();
   const contenido = useContenidoSemana(materiaId, semana);
   const volver = rutas.semana(grupoId, semana);
-  useBotonVolver({ ruta: volver, texto: APP_TEXTS.nav.volverSemana(semana) });
 
   const guardado = useMutation({
     mutationFn: (valores: FormularioContenidoValores) =>

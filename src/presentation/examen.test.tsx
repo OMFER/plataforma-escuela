@@ -20,12 +20,22 @@ describe('RevisionExamen', () => {
     expect(screen.getByText('1 de 2 correctas')).toBeInTheDocument();
     const primera = screen.getByRole('article', { name: 'Pregunta 1' });
     expect(within(primera).getByText('✓ Correcta')).toBeInTheDocument();
+    // Si acertó, "Respuesta correcta" no se repite en su opción.
+    const acertada = within(primera).getByText('4').closest('li');
+    expect(acertada).toHaveTextContent('Tu respuesta');
+    expect(acertada).not.toHaveTextContent('Respuesta correcta');
+    expect(acertada).toHaveAttribute('data-estado', 'acertada');
+
     const segunda = screen.getByRole('article', { name: 'Pregunta 2' });
     expect(within(segunda).getByText('✗ Incorrecta')).toBeInTheDocument();
     expect(within(segunda).getByText('Rojo').closest('li')).toHaveTextContent('Tu respuesta');
+    // Si se equivocó, la correcta se señala con su etiqueta, sin verde ni palomita.
     const correcta = within(segunda).getByText('Azul').closest('li');
     expect(correcta).toHaveTextContent('Respuesta correcta');
     expect(correcta).toHaveAttribute('data-correcta', 'true');
+    expect(correcta).toHaveAttribute('data-estado', 'correcta');
+    expect(correcta).not.toHaveTextContent('check_circle');
+    expect(correcta?.className).not.toMatch(/exito/);
   });
 });
 
@@ -115,19 +125,5 @@ describe('pantalla de examen del alumno', () => {
     });
     expect(await screen.findByText('Este examen ya cerró')).toBeInTheDocument();
     expect(screen.getByText(/Cerró el 10 de enero de 2020/)).toBeInTheDocument();
-  });
-
-  it('el examen final vuelve al inicio', async () => {
-    renderApp(ruta, {
-      sesion: sesionAlumno,
-      preparar: (r) =>
-        r.examenesGrupo.lista.push({
-          grupoId: 'g1',
-          resumen: resumenExamen({ tipo: 'Final', semana: undefined, titulo: 'Examen final' }),
-          preguntas: preguntasEjemplo,
-        }),
-    });
-    expect(await screen.findByRole('heading', { name: 'Examen final' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Volver al inicio/ })).toHaveAttribute('href', '/');
   });
 });
