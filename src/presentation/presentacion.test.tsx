@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { ErrorAplicacion } from '../domain/errors/ErrorAplicacion';
-import { grupoEjemplo, usuarioAlumno } from '../test/fakes';
-import { preguntasEjemplo, resumenExamen, sesionAlumno, sesionMaestro, ventanas } from '../test/datos';
+import { boletaMateria, preguntasEjemplo, resumenExamen, sesionAlumno, sesionMaestro, ventanas } from '../test/datos';
+import { grupoEjemplo, sembrarPlan, usuarioAlumno } from '../test/fakes';
 import { renderApp } from '../test/renderApp';
 import { WeekSelector } from './components/dashboard/WeekSelector';
 
@@ -15,7 +15,7 @@ describe('WeekSelector', () => {
         <WeekSelector semanas={grupoEjemplo.semanas} rutaSemana={(n) => `/grupos/g1/semanas/${n}`} />
       </MemoryRouter>,
     );
-    expect(screen.getAllByRole('link')).toHaveLength(3);
+    expect(screen.getAllByRole('link')).toHaveLength(4);
     expect(screen.getByRole('link', { name: 'Semana 1, 3–9 ago, completada' })).toHaveAttribute('href', '/grupos/g1/semanas/1');
     expect(screen.getByRole('link', { name: /Semana 2, 10–16 ago, semana actual/ })).toHaveAttribute('aria-current', 'date');
     // Las semanas futuras también se pueden abrir.
@@ -48,9 +48,9 @@ describe('autenticación y rutas', () => {
     await usuario.click(screen.getByRole('button', { name: 'Entrar' }));
 
     expect(await screen.findByRole('heading', { name: '¡Hola, Ana López!' })).toBeInTheDocument();
-    expect(await screen.findByText('Creatividad e innovación tecnológica')).toBeInTheDocument();
-    expect(screen.getByText('Grupo 05 | 2026-B | Aula 106')).toBeInTheDocument();
-    expect(screen.getByText('Semana 2 de 3')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Prepa intensiva' })).toBeInTheDocument();
+    expect(screen.getByText(/Grupo Generación agosto · Inicia/)).toBeInTheDocument();
+    expect(screen.getByText('Semana 2 de 4')).toBeInTheDocument();
     expect(screen.getByText('Alumno')).toBeInTheDocument();
   });
 
@@ -80,96 +80,69 @@ describe('autenticación y rutas', () => {
     renderApp('/admin', { sesion: sesionAlumno });
     expect(await screen.findByRole('heading', { name: /¡Hola/ })).toBeInTheDocument();
   });
-});
 
-describe('dashboard', () => {
-  it('el alumno ve el estado del examen final y el acceso a calificaciones', async () => {
-    renderApp('/', {
-      sesion: sesionAlumno,
-      preparar: (r) => {
-        r.grupos.lista.push(grupoEjemplo);
-        r.examenesGrupo.lista.push({
-          grupoId: 'g1',
-          resumen: resumenExamen({ id: 'ef', tipo: 'Final', semana: undefined, ventana: ventanas.proxima }),
-          preguntas: preguntasEjemplo,
-        });
-      },
-    });
-    const final = await screen.findByRole('button', { name: /Hacer examen final/ });
-    expect(final).toBeDisabled();
-    expect(final).toHaveAccessibleDescription(/^Abre el 2 de marzo de 2099/);
-    expect(screen.getByRole('link', { name: /Calificaciones/ })).toHaveAttribute('href', '/grupos/g1/calificaciones');
-    expect(screen.getByRole('link', { name: /Ir a la semana actual/ })).toHaveAttribute('href', '/grupos/g1/semanas/2');
-  });
-
-  it('si ya respondió el final muestra su calificación y lleva a la revisión', async () => {
-    renderApp('/', {
-      sesion: sesionAlumno,
-      preparar: (r) => {
-        r.grupos.lista.push(grupoEjemplo);
-        r.examenesGrupo.lista.push({
-          grupoId: 'g1',
-          resumen: resumenExamen({
-            id: 'ef',
-            tipo: 'Final',
-            semana: undefined,
-            ventana: ventanas.cerrada,
-            miIntento: { aciertos: 1, totalPreguntas: 2, calificacion: 8, fecha: '' },
-          }),
-          preguntas: preguntasEjemplo,
-        });
-      },
-    });
-    expect(await screen.findByRole('link', { name: /Examen final · Calificación: 8 \/ 10/ })).toHaveAttribute(
-      'href',
-      '/grupos/g1/examenes/ef',
-    );
-  });
-
-  it('sin examen final el alumno lo ve deshabilitado y el maestro puede crearlo', async () => {
-    renderApp('/', { sesion: sesionAlumno, preparar: (r) => r.grupos.lista.push(grupoEjemplo) });
-    expect(await screen.findByRole('button', { name: /Sin examen final/ })).toBeDisabled();
-  });
-
-  it('el maestro ve el enlace para crear el examen final', async () => {
-    renderApp('/', { sesion: sesionMaestro, preparar: (r) => r.grupos.lista.push(grupoEjemplo) });
-    expect(await screen.findByRole('link', { name: /Crear examen final/ })).toHaveAttribute(
-      'href',
-      '/grupos/g1/examenes/nuevo?tipo=Final',
-    );
+  it('un alumno no puede abrir el editor de una materia', async () => {
+    renderApp('/materias/m1', { sesion: sesionAlumno });
+    expect(await screen.findByRole('heading', { name: /¡Hola/ })).toBeInTheDocument();
   });
 });
 
-describe('home', () => {
-  it('junto a cada materia el alumno ve la calificación del semestre que calcula el servidor', async () => {
+describe('dashboard del alumno', () => {
+  it('muestra su grupo con el calendario, las materias por bloque y su promedio general', async () => {
     renderApp('/', {
       sesion: sesionAlumno,
       preparar: (r) => {
         r.grupos.lista.push(grupoEjemplo);
-        r.grupos.calificaciones.g1 = [{ alumno: usuarioAlumno, semanas: [], final: null, semestre: 0.44 }];
+        r.grupos.calificaciones.g1 = {
+          materias: [],
+          boletas: [{ alumno: usuarioAlumno, materias: [boletaMateria('m1', [8, 9])], promedioGeneral: 4.25 }],
+        };
       },
     });
-    expect(await screen.findByLabelText('Calificación acumulada: 0.4 de 10')).toBeInTheDocument();
+    const grupo = await screen.findByRole('article', { name: 'Grupo Generación agosto' });
+    expect(await within(grupo).findByLabelText('Promedio general: 4.3 de 10')).toBeInTheDocument();
+    expect(within(grupo).getByRole('link', { name: /Ir a la semana actual/ })).toHaveAttribute('href', '/grupos/g1/semanas/2');
+    expect(within(grupo).getAllByRole('link', { name: /^Semana \d/ })).toHaveLength(4);
+    const bloques = within(grupo).getByRole('list', { name: 'Materias por bloque' });
+    expect(within(bloques).getByText('Semanas 1 y 2')).toBeInTheDocument();
+    expect(within(bloques).getByText('Matemáticas · Historia')).toBeInTheDocument();
+    expect(within(bloques).getByText('Química')).toBeInTheDocument();
+    expect(within(grupo).getByRole('link', { name: /Calificaciones/ })).toHaveAttribute('href', '/grupos/g1/calificaciones');
   });
 
-  it('el maestro no ve calificación junto a la materia', async () => {
+  it('sin grupo lo indica', async () => {
+    renderApp('/', { sesion: sesionAlumno });
+    expect(await screen.findByText('Aún no estás inscrito en un grupo.')).toBeInTheDocument();
+  });
+});
+
+describe('dashboard del maestro', () => {
+  it('lista sus materias por versión del plan y los grupos que las cursan, sin calendario ni promedio', async () => {
     renderApp('/', {
       sesion: sesionMaestro,
       preparar: (r) => {
+        sembrarPlan(r);
         r.grupos.lista.push(grupoEjemplo);
-        r.grupos.calificaciones.g1 = [{ alumno: usuarioAlumno, semanas: [], final: null, semestre: 5 }];
       },
     });
-    expect(await screen.findByText(grupoEjemplo.materia.nombre)).toBeInTheDocument();
-    expect(screen.queryByLabelText(/Calificación acumulada/)).not.toBeInTheDocument();
+    const plan = await screen.findByRole('region', { name: 'Prepa intensiva · versión 1' });
+    expect(within(plan).getByText('Publicado')).toBeInTheDocument();
+    expect(within(plan).getByRole('link', { name: /Matemáticas/ })).toHaveAttribute('href', '/materias/m1');
+    expect(within(plan).getByRole('link', { name: /Química/ })).toHaveAttribute('href', '/materias/m3');
+    expect(within(plan).queryByText('Historia')).not.toBeInTheDocument();
+
+    const grupo = await screen.findByRole('article', { name: 'Grupo Generación agosto' });
+    expect(within(grupo).queryByRole('link', { name: /^Semana \d/ })).not.toBeInTheDocument();
+    expect(within(grupo).queryByLabelText(/Promedio general/)).not.toBeInTheDocument();
+    expect(within(grupo).getByRole('link', { name: /Calificaciones/ })).toBeInTheDocument();
   });
 });
 
 describe('layout', () => {
-  it('en la semana el header muestra la materia y ningún botón volver', async () => {
+  it('en la semana el header muestra el plan del grupo y ningún botón volver', async () => {
     renderApp('/grupos/g1/semanas/2', { sesion: sesionAlumno, preparar: (r) => r.grupos.lista.push(grupoEjemplo) });
     const header = await screen.findByRole('banner');
-    expect(await within(header).findByText(grupoEjemplo.materia.nombre)).toBeInTheDocument();
+    expect(await within(header).findByText('Prepa intensiva')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Volver/ })).not.toBeInTheDocument();
   });
 
@@ -181,14 +154,15 @@ describe('layout', () => {
         r.examenesGrupo.lista.push({ grupoId: 'g1', resumen: resumenExamen(), preguntas: preguntasEjemplo });
       },
     });
-    expect(await screen.findByRole('heading', { name: 'Quiz semana 2' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Semana 2 · Examen 1' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Volver/ })).not.toBeInTheDocument();
   });
 
-  it('fuera de un grupo el header no muestra la materia', async () => {
+  it('fuera de un grupo el header no muestra el plan', async () => {
     renderApp('/', { sesion: sesionAlumno, preparar: (r) => r.grupos.lista.push(grupoEjemplo) });
     const header = await screen.findByRole('banner');
-    expect(within(header).queryByText(grupoEjemplo.materia.nombre)).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Prepa intensiva' })).toBeInTheDocument();
+    expect(within(header).queryByText('Prepa intensiva')).not.toBeInTheDocument();
   });
 
   it('al cambiar de pantalla la página empieza desde arriba', async () => {
@@ -241,22 +215,22 @@ describe('layout', () => {
   });
 });
 
-describe('semana', () => {
+describe('semana del alumno', () => {
   const contenido = {
     id: 'c1',
     materiaId: 'm1',
     semana: 2,
-    tema: 'Pensamiento de diseño',
-    introduccion: 'Esta semana exploramos el design thinking.',
+    tema: 'Ecuaciones',
+    introduccion: 'Esta semana resolvemos ecuaciones.',
     recursos: [
       { tipo: 'youtube' as const, titulo: 'Video introductorio', url: 'https://youtu.be/dQw4w9WgXcQ' },
       { tipo: 'pdf' as const, titulo: 'Lectura obligatoria', url: 'https://escuela.mx/lectura.pdf' },
-      { tipo: 'youtube' as const, titulo: 'Video roto', url: 'https://youtube.com/channel/x' },
     ],
-    links: {},
+    links: { grabacion: 'https://drive.google.com/file/d/rec/view' },
   };
 
-  it('muestra el contenido de la materia del grupo y los botones de examen y reposición según su ventana', async () => {
+  it('muestra las materias del bloque y, de la elegida, su semana con los exámenes 1 y 2 según su ventana', async () => {
+    const usuario = userEvent.setup();
     renderApp('/grupos/g1/semanas/2', {
       sesion: sesionAlumno,
       preparar: (r) => {
@@ -264,108 +238,117 @@ describe('semana', () => {
         r.contenido.lista.push(contenido);
         r.examenesGrupo.lista.push(
           { grupoId: 'g1', resumen: resumenExamen(), preguntas: preguntasEjemplo },
-          {
-            grupoId: 'g1',
-            resumen: resumenExamen({ id: 'e2', tipo: 'Reposicion', ventana: ventanas.proxima }),
-            preguntas: preguntasEjemplo,
-          },
+          { grupoId: 'g1', resumen: resumenExamen({ id: 'e2', numero: 2, ventana: ventanas.proxima }), preguntas: preguntasEjemplo },
         );
       },
     });
 
-    expect(await screen.findByRole('heading', { name: 'Pensamiento de diseño' })).toBeInTheDocument();
-    expect(screen.getByText(/Grupo 05 · 2026-B/)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Semana 2\s*de 4/ })).toBeInTheDocument();
+    const materias = screen.getByRole('navigation', { name: 'Materias de la semana' });
+    expect(within(materias).getByRole('link', { name: 'Matemáticas' })).toHaveAttribute('aria-current', 'page');
+    expect(within(materias).getByRole('link', { name: 'Historia' })).toHaveAttribute('href', '/grupos/g1/semanas/2?materia=m2');
+
+    expect(await screen.findByRole('heading', { name: 'Ecuaciones' })).toBeInTheDocument();
+    expect(screen.getByText('Semana 2 de Matemáticas · Carlos Ruiz')).toBeInTheDocument();
     expect(screen.getByTitle('Video introductorio')).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
-    const pdf = screen.getByRole('link', { name: /Lectura obligatoria/ });
-    expect(pdf).toHaveAttribute('target', '_blank');
-    expect(pdf).toHaveAttribute('rel', 'noopener noreferrer');
-    expect(screen.getByRole('link', { name: /Video roto/ })).toHaveAttribute('href', 'https://youtube.com/channel/x');
+    expect(screen.getByRole('link', { name: /Ver clase grabada/ })).toHaveAttribute('href', contenido.links.grabacion);
 
-    expect(screen.getByRole('button', { name: /Ver clase grabada/ })).toBeDisabled();
-    const examen = await screen.findByRole('link', { name: /Hacer examen/ });
-    expect(examen).toHaveAttribute('href', '/grupos/g1/examenes/e1');
-    expect(examen).toHaveAccessibleDescription(/^Disponible hasta el/);
-    const reposicion = screen.getByRole('button', { name: /Reposición/ });
-    expect(reposicion).toBeDisabled();
-    expect(reposicion).toHaveAccessibleDescription(/^Abre el 2 de marzo de 2099/);
+    const examen1 = await screen.findByRole('link', { name: /Hacer examen 1/ });
+    expect(examen1).toHaveAttribute('href', '/grupos/g1/examenes/e1');
+    expect(examen1).toHaveAccessibleDescription(/^Disponible hasta el/);
+    const examen2 = screen.getByRole('button', { name: /Hacer examen 2/ });
+    expect(examen2).toBeDisabled();
+    expect(examen2).toHaveAccessibleDescription(/^Abre el 2 de marzo de 2099/);
+
+    await usuario.click(within(materias).getByRole('link', { name: 'Historia' }));
+    expect(await screen.findByText('Semana 2 de Historia')).toBeInTheDocument();
+    expect(await screen.findByText('Esta semana aún no tiene contenido')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Examen no disponible/ })).toHaveLength(2);
   });
 
-  it('un examen cerrado sin responder aparece deshabilitado como "Cerrado"', async () => {
-    renderApp('/grupos/g1/semanas/2', {
-      sesion: sesionAlumno,
-      preparar: (r) => {
-        r.grupos.lista.push(grupoEjemplo);
-        r.examenesGrupo.lista.push({ grupoId: 'g1', resumen: resumenExamen({ ventana: ventanas.cerrada }), preguntas: preguntasEjemplo });
-      },
-    });
-    const boton = await screen.findByRole('button', { name: /Hacer examen/ });
-    expect(boton).toBeDisabled();
-    expect(boton).toHaveAccessibleDescription('Cerrado');
-  });
-
-  it('sin contenido ni exámenes muestra los mensajes correspondientes', async () => {
+  it('en las semanas 3 y 4 se cursa la materia del bloque 2', async () => {
     renderApp('/grupos/g1/semanas/3', { sesion: sesionAlumno, preparar: (r) => r.grupos.lista.push(grupoEjemplo) });
-    expect(await screen.findByText('El maestro aún no publica el contenido de esta semana')).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: /Sin examen esta semana/ })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /Sin reposición esta semana/ })).toBeDisabled();
+    expect(await screen.findByText('Semana 1 de Química · Carlos Ruiz')).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Materias de la semana' })).not.toBeInTheDocument();
   });
 
-  it('si ya respondió muestra la calificación y lleva a la revisión', async () => {
+  it('si ya respondió muestra la calificación sobre 10 y lleva a la revisión', async () => {
     renderApp('/grupos/g1/semanas/2', {
       sesion: sesionAlumno,
       preparar: (r) => {
         r.grupos.lista.push(grupoEjemplo);
         r.examenesGrupo.lista.push({
           grupoId: 'g1',
-          resumen: resumenExamen({ miIntento: { aciertos: 2, totalPreguntas: 2, calificacion: 10, fecha: '2026-08-12T00:00:00Z' } }),
+          resumen: resumenExamen({ miIntento: { aciertos: 1, totalPreguntas: 2, calificacion: 5, fecha: '' } }),
           preguntas: preguntasEjemplo,
-          respuestas: [1, 0],
         });
       },
     });
-    const enlace = await screen.findByRole('link', { name: /Examen semanal · Calificación: 10 \/ 10/ });
-    expect(enlace).toHaveAttribute('href', '/grupos/g1/examenes/e1');
-    expect(screen.queryByRole('link', { name: /^Hacer examen$/ })).not.toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /Examen 1 · Calificación: 5 \/ 10/ })).toHaveAttribute(
+      'href',
+      '/grupos/g1/examenes/e1',
+    );
   });
 
   it('un grupo inexistente muestra un aviso', async () => {
     renderApp('/grupos/nada/semanas/1', { sesion: sesionAlumno });
     expect(await screen.findByText('No encontramos este grupo.')).toBeInTheDocument();
   });
+});
 
-  it('el maestro ve crear contenido, examen semanal y la reposición bloqueada hasta tener el semanal', async () => {
-    renderApp('/grupos/g1/semanas/1', { sesion: sesionMaestro, preparar: (r) => r.grupos.lista.push(grupoEjemplo) });
-    expect(await screen.findByRole('link', { name: /Crear contenido/ })).toHaveAttribute('href', '/grupos/g1/semanas/1/contenido');
-    expect(await screen.findByRole('link', { name: /Crear examen semanal/ })).toHaveAttribute(
-      'href',
-      '/grupos/g1/examenes/nuevo?tipo=Semanal&semana=1',
-    );
-    expect(screen.getByRole('button', { name: /Crear reposición/ })).toBeDisabled();
-    expect(screen.getByText('Primero crea el examen semanal.')).toBeInTheDocument();
-  });
-
-  it('con examen semanal el maestro puede editarlo y crear la reposición', async () => {
-    renderApp('/grupos/g1/semanas/2', {
+describe('materia del maestro', () => {
+  it('en un plan publicado solo ofrece corregir lo que existe y no deja importar', async () => {
+    renderApp('/materias/m1', {
       sesion: sesionMaestro,
       preparar: (r) => {
-        r.grupos.lista.push(grupoEjemplo);
-        r.examenesGrupo.lista.push({ grupoId: 'g1', resumen: resumenExamen(), preguntas: preguntasEjemplo });
+        sembrarPlan(r);
+        r.contenido.lista.push({ id: 'c1', materiaId: 'm1', semana: 1, tema: 'Fracciones', recursos: [] });
+        r.examenes.lista.push({ id: 'e1', materiaId: 'm1', semana: 1, numero: 1, titulo: 'Repaso', diasExtra: 0, preguntas: preguntasEjemplo });
       },
     });
-    expect(await screen.findByRole('link', { name: /Editar examen semanal/ })).toHaveAttribute('href', '/grupos/g1/examenes/e1/editar');
-    expect(screen.getByRole('link', { name: /Crear reposición/ })).toHaveAttribute(
+    expect(await screen.findByRole('heading', { name: 'Matemáticas' })).toBeInTheDocument();
+    expect(screen.getByRole('note')).toHaveTextContent(/ya está publicado/);
+
+    const semana1 = await screen.findByRole('region', { name: 'Semana 1' });
+    expect(await within(semana1).findByText('Fracciones')).toBeInTheDocument();
+    expect(within(semana1).getByRole('link', { name: /Editar contenido/ })).toHaveAttribute('href', '/materias/m1/semanas/1/contenido');
+    expect(within(semana1).getByRole('link', { name: /Editar examen 1/ })).toHaveAttribute('href', '/materias/m1/examenes/e1/editar');
+    expect(within(semana1).queryByRole('link', { name: /Crear/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Importar exámenes/ })).not.toBeInTheDocument();
+  });
+
+  it('en borrador ofrece crear contenido y exámenes, e importar desde la plantilla', async () => {
+    const usuario = userEvent.setup();
+    const { repos } = renderApp('/materias/m1', {
+      sesion: sesionMaestro,
+      preparar: (r) => {
+        sembrarPlan(r, { estado: 'borrador' });
+        r.examenes.errorAlImportar = new ErrorAplicacion(['La hoja tiene 1 error; no se importó nada', 'Fila 3: la semana debe ser 1 o 2'], 400);
+      },
+    });
+    const semana2 = await screen.findByRole('region', { name: 'Semana 2' });
+    expect(await within(semana2).findByRole('link', { name: /Crear contenido/ })).toHaveAttribute('href', '/materias/m1/semanas/2/contenido');
+    expect(within(semana2).getByRole('link', { name: 'Crear Semana 2 · Examen 2' })).toHaveAttribute(
       'href',
-      '/grupos/g1/examenes/nuevo?tipo=Reposicion&semana=2',
+      '/materias/m1/examenes/nuevo?semana=2&numero=2',
     );
+
+    expect(screen.getByRole('link', { name: 'plantilla de ejemplo' })).toHaveAttribute('href', '/plantilla-examenes.csv');
+    const importar = screen.getByRole('button', { name: /Importar/ });
+    expect(importar).toBeDisabled();
+    await usuario.upload(screen.getByLabelText('Archivo CSV'), new File(['semana,examen\n3,1'], 'examenes.csv', { type: 'text/csv' }));
+    await usuario.click(importar);
+    expect(await screen.findByText('Fila 3: la semana debe ser 1 o 2')).toBeInTheDocument();
+    expect(repos.examenes.importaciones).toEqual([{ materiaId: 'm1', csv: 'semana,examen\n3,1' }]);
   });
 });
 
-describe('editor de contenido (maestro)', () => {
-  it('valida URLs y crea el contenido de la semana en la materia del grupo', async () => {
+describe('editor de contenido', () => {
+  it('valida URLs, crea el contenido de la semana de la materia y vuelve a la materia', async () => {
     const usuario = userEvent.setup();
-    const { repos } = renderApp('/grupos/g1/semanas/1/contenido', {
+    const { repos } = renderApp('/materias/m1/semanas/1/contenido', {
       sesion: sesionMaestro,
-      preparar: (r) => r.grupos.lista.push(grupoEjemplo),
+      preparar: (r) => sembrarPlan(r, { estado: 'borrador' }),
     });
 
     await usuario.type(await screen.findByLabelText('Tema'), 'Introducción');
@@ -381,7 +364,8 @@ describe('editor de contenido (maestro)', () => {
     await usuario.type(screen.getByLabelText('Link de la clase grabada'), 'https://drive.google.com/grabacion');
     await usuario.click(screen.getByRole('button', { name: /Guardar contenido/ }));
 
-    expect(await screen.findByRole('heading', { name: 'Introducción' })).toBeInTheDocument();
+    const semana1 = await screen.findByRole('region', { name: 'Semana 1' });
+    expect(await within(semana1).findByText('Introducción')).toBeInTheDocument();
     expect(repos.contenido.creados[0]).toMatchObject({
       materiaId: 'm1',
       semana: 1,
@@ -391,24 +375,36 @@ describe('editor de contenido (maestro)', () => {
     });
   });
 
-  it('elimina el contenido después de confirmar', async () => {
-    const usuario = userEvent.setup();
-    const { repos } = renderApp('/grupos/g1/semanas/2/contenido', {
+  it('en un plan publicado corrige pero no ofrece eliminar', async () => {
+    renderApp('/materias/m1/semanas/2/contenido', {
       sesion: sesionMaestro,
       preparar: (r) => {
-        r.grupos.lista.push(grupoEjemplo);
+        sembrarPlan(r);
+        r.contenido.lista.push({ id: 'c1', materiaId: 'm1', semana: 2, tema: 'Tema', recursos: [] });
+      },
+    });
+    expect(await screen.findByLabelText('Tema')).toHaveValue('Tema');
+    expect(screen.queryByRole('button', { name: /Eliminar contenido/ })).not.toBeInTheDocument();
+  });
+
+  it('en borrador elimina el contenido después de confirmar', async () => {
+    const usuario = userEvent.setup();
+    const { repos } = renderApp('/materias/m1/semanas/2/contenido', {
+      sesion: sesionMaestro,
+      preparar: (r) => {
+        sembrarPlan(r, { estado: 'borrador' });
         r.contenido.lista.push({ id: 'c1', materiaId: 'm1', semana: 2, tema: 'Tema', recursos: [] });
       },
     });
     await usuario.click(await screen.findByRole('button', { name: /Eliminar contenido/ }));
     const dialogo = screen.getByRole('dialog', { name: '¿Eliminar el contenido de esta semana?' });
     await usuario.click(within(dialogo).getByRole('button', { name: 'Sí, eliminar' }));
-    expect(await screen.findByText('El maestro aún no publica el contenido de esta semana')).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Semana 2' })).toBeInTheDocument();
     expect(repos.contenido.eliminados).toEqual(['c1']);
   });
 });
 
-describe('editor de examen (maestro)', () => {
+describe('editor de examen', () => {
   const llenarPregunta = async (usuario: ReturnType<typeof userEvent.setup>) => {
     await usuario.type(screen.getByLabelText('Enunciado'), '¿2 + 2?');
     await usuario.type(screen.getByLabelText('Opción 1 de la pregunta 1'), '3');
@@ -416,32 +412,28 @@ describe('editor de examen (maestro)', () => {
     await usuario.click(screen.getByLabelText('Marcar opción 2 como correcta'));
   };
 
-  it('crea un examen final: oculta la semana y envía los días extra', async () => {
+  it('crea el examen 2 de la semana 1 con sus días extra', async () => {
     const usuario = userEvent.setup();
-    const { repos } = renderApp('/grupos/g1/examenes/nuevo?tipo=Semanal&semana=2', {
+    const { repos } = renderApp('/materias/m1/examenes/nuevo?semana=1&numero=2', {
       sesion: sesionMaestro,
-      preparar: (r) => r.grupos.lista.push(grupoEjemplo),
+      preparar: (r) => sembrarPlan(r, { estado: 'borrador' }),
     });
 
-    expect(await screen.findByLabelText('Semana')).toHaveValue('2');
-    await usuario.selectOptions(screen.getByLabelText('Tipo de examen'), 'Final');
-    expect(screen.queryByLabelText('Semana')).not.toBeInTheDocument();
-    expect(screen.getByText(/Abre al terminar el semestre/)).toBeInTheDocument();
-
-    await usuario.clear(screen.getByLabelText('Título'));
-    await usuario.type(screen.getByLabelText('Título'), 'Examen final');
+    expect(await screen.findByLabelText('Semana de la materia')).toHaveValue('1');
+    expect(screen.getByLabelText('Examen')).toHaveValue('2');
+    expect(screen.getByLabelText('Título')).toHaveValue('Semana 1 · Examen 2');
+    expect(screen.getByText(/Abre el jueves/)).toBeInTheDocument();
     await usuario.clear(screen.getByLabelText('Días extra'));
     await usuario.type(screen.getByLabelText('Días extra'), '3');
     await llenarPregunta(usuario);
     await usuario.click(screen.getByRole('button', { name: /Crear examen/ }));
 
     expect(await screen.findByText('Examen creado correctamente.')).toBeInTheDocument();
-    expect(repos.examenes.creados[0]).toMatchObject({ materiaId: 'm1', tipo: 'Final', titulo: 'Examen final', diasExtra: 3 });
-    expect(repos.examenes.creados[0]).not.toHaveProperty('semana');
-    expect(screen.getByRole('heading', { name: 'Editar examen final' })).toBeInTheDocument();
+    expect(repos.examenes.creados[0]).toMatchObject({ materiaId: 'm1', semana: 1, numero: 2, diasExtra: 3 });
+    expect(screen.getByRole('heading', { name: 'Editar examen' })).toBeInTheDocument();
 
-    // Al guardar cambios, la confirmación aparece junto al botón (dentro del formulario), no arriba de la página.
-    await usuario.type(screen.getByLabelText('Título'), ' 2026');
+    // Al guardar cambios, la confirmación aparece junto al botón (dentro del formulario).
+    await usuario.type(screen.getByLabelText('Título'), ' (repaso)');
     const guardar = screen.getByRole('button', { name: /Guardar cambios/ });
     await usuario.click(guardar);
     const aviso = await screen.findByRole('status');
@@ -451,9 +443,9 @@ describe('editor de examen (maestro)', () => {
 
   it('valida los días extra (0 a 30)', async () => {
     const usuario = userEvent.setup();
-    const { repos } = renderApp('/grupos/g1/examenes/nuevo?tipo=Semanal&semana=1', {
+    const { repos } = renderApp('/materias/m1/examenes/nuevo?semana=1&numero=1', {
       sesion: sesionMaestro,
-      preparar: (r) => r.grupos.lista.push(grupoEjemplo),
+      preparar: (r) => sembrarPlan(r, { estado: 'borrador' }),
     });
     await usuario.clear(await screen.findByLabelText('Días extra'));
     await usuario.type(screen.getByLabelText('Días extra'), '45');
@@ -463,48 +455,40 @@ describe('editor de examen (maestro)', () => {
     expect(repos.examenes.creados).toHaveLength(0);
   });
 
-  it('al editar muestra los resultados del grupo y el 409 al intentar eliminar', async () => {
+  it('con respuestas registradas solo deja corregir la redacción', async () => {
     const usuario = userEvent.setup();
-    renderApp('/grupos/g1/examenes/e1/editar', {
+    const { repos } = renderApp('/materias/m1/examenes/e1/editar', {
       sesion: sesionMaestro,
       preparar: (r) => {
-        r.grupos.lista.push(grupoEjemplo);
+        sembrarPlan(r);
         r.examenes.lista.push({
           id: 'e1',
           materiaId: 'm1',
-          tipo: 'Semanal',
-          semana: 2,
-          titulo: 'Quiz semana 2',
-          puntajeMaximo: 10,
-          diasExtra: 2,
+          semana: 1,
+          numero: 1,
+          titulo: 'Repaso',
+          diasExtra: 0,
           preguntas: preguntasEjemplo,
+          tieneRespuestas: true,
         });
-        r.examenesGrupo.lista.push({ grupoId: 'g1', resumen: resumenExamen(), preguntas: preguntasEjemplo });
-        r.examenesGrupo.intentos.push({
-          id: 'i1',
-          examenId: 'e1',
-          alumno: { id: 'u1', nombre: 'Ana López', correo: 'ana@escuela.mx' },
-          respuestas: [1, 0],
-          aciertos: 2,
-          totalPreguntas: 2,
-          calificacion: 10,
-          fecha: '2026-08-12T15:00:00.000Z',
-        });
-        r.examenes.errorAlEliminar = new ErrorAplicacion('No se puede eliminar un examen semanal que tiene reposición.', 409);
       },
     });
+    expect(await screen.findByText(/ya tiene respuestas de alumnos/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Añadir pregunta/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Quitar pregunta 1' })).toBeDisabled();
+    expect(screen.getAllByRole('button', { name: /Añadir opción/ })[0]).toBeDisabled();
+    expect(screen.getAllByLabelText(/Marcar opción 1 como correcta/)[0]).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /Eliminar examen/ })).not.toBeInTheDocument();
 
-    expect(await screen.findByRole('heading', { name: 'Editar examen semanal' })).toBeInTheDocument();
-    expect(await screen.findByText(/Semanal · Semana 2/)).toBeInTheDocument();
-    expect(screen.queryByLabelText('Tipo de examen')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Días extra')).toHaveValue(2);
-    expect(await screen.findByText('Ana López')).toBeInTheDocument();
-    expect(screen.getByText(/ya tiene respuestas de alumnos/)).toBeInTheDocument();
-    expect(screen.getByText(/En este grupo: Disponible hasta el/)).toBeInTheDocument();
-
-    await usuario.click(screen.getByRole('button', { name: /Eliminar examen/ }));
-    const dialogo = screen.getByRole('dialog', { name: '¿Eliminar este examen?' });
-    await usuario.click(within(dialogo).getByRole('button', { name: 'Sí, eliminar' }));
-    expect(await within(dialogo).findByRole('alert')).toHaveTextContent('No se puede eliminar un examen semanal que tiene reposición.');
+    const enunciado = screen.getAllByLabelText('Enunciado')[0]!;
+    await usuario.clear(enunciado);
+    await usuario.type(enunciado, '¿Cuánto es 2 más 2?');
+    await usuario.click(screen.getByRole('button', { name: /Guardar cambios/ }));
+    expect(await screen.findByText('Examen guardado correctamente.')).toBeInTheDocument();
+    expect(repos.examenes.actualizaciones[0]?.cambios.preguntas?.[0]).toEqual({
+      enunciado: '¿Cuánto es 2 más 2?',
+      opciones: ['3', '4'],
+      respuestaCorrecta: 1,
+    });
   });
 });

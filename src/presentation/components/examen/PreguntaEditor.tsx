@@ -8,9 +8,11 @@ interface PreguntaEditorProps {
   indice: number;
   puedeQuitarse: boolean;
   alQuitar: () => void;
+  /** Solo se corrige el texto: la respuesta correcta y el número de opciones quedan fijos. */
+  soloRedaccion?: boolean;
 }
 
-export const PreguntaEditor = ({ indice, puedeQuitarse, alQuitar }: PreguntaEditorProps) => {
+export const PreguntaEditor = ({ indice, puedeQuitarse, alQuitar, soloRedaccion = false }: PreguntaEditorProps) => {
   const {
     control,
     register,
@@ -66,6 +68,7 @@ export const PreguntaEditor = ({ indice, puedeQuitarse, alQuitar }: PreguntaEdit
                     name={`pregunta-${indice}-correcta`}
                     checked={field.value === j}
                     onChange={() => field.onChange(j)}
+                    disabled={soloRedaccion}
                     className="accent-primary w-4 h-4 mt-3"
                     aria-label={`Marcar opción ${j + 1} como correcta`}
                   />
@@ -84,7 +87,7 @@ export const PreguntaEditor = ({ indice, puedeQuitarse, alQuitar }: PreguntaEdit
                     type="button"
                     className={estilos.botonIcono}
                     onClick={() => quitarOpcion(j)}
-                    disabled={opciones.fields.length <= MIN_OPCIONES}
+                    disabled={soloRedaccion || opciones.fields.length <= MIN_OPCIONES}
                     aria-label={`Quitar opción ${j + 1}`}
                   >
                     <span className="material-symbols-outlined">close</span>
@@ -103,7 +106,7 @@ export const PreguntaEditor = ({ indice, puedeQuitarse, alQuitar }: PreguntaEdit
           type="button"
           className="text-primary font-bold text-body-sm flex items-center gap-1 hover:underline disabled:opacity-40 disabled:no-underline"
           onClick={() => opciones.append({ texto: '' })}
-          disabled={opciones.fields.length >= MAX_OPCIONES}
+          disabled={soloRedaccion || opciones.fields.length >= MAX_OPCIONES}
         >
           <span className="material-symbols-outlined text-[18px]">add</span>
           Añadir opción

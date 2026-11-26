@@ -1,23 +1,29 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { esSemanaDeMateria } from '../../domain/rules/examen';
 import { AccionEliminar } from '../components/common/AccionEliminar';
 import { Cargando } from '../components/common/Cargando';
+import { EstadoVacio } from '../components/common/EstadoVacio';
 import { MensajeError } from '../components/common/MensajeError';
-import { EncabezadoSemana } from '../components/contenido/EncabezadoSemana';
 import { FormularioContenido } from '../components/contenido/FormularioContenido';
 import { aCambiosContenido, type FormularioContenidoValores } from '../components/contenido/esquemaContenido';
+import { AvisoPlanPublicado, EncabezadoMateria } from '../components/materia/EncabezadoMateria';
 import { claves, useContenidoSemana } from '../hooks/consultas';
-import { useParametrosSemana } from '../hooks/useParametrosGrupo';
+import { useMateriaDeRuta } from '../hooks/useParametrosGrupo';
 import { useCasosDeUso } from '../providers/DependenciasContext';
 import { rutas } from '../routes/rutas';
 
+/** Crea o corrige el contenido de una semana (1 o 2) de la materia; el cambio lo ven todos los grupos. */
 export const EditorContenidoPage = () => {
-  const { grupoId, semana, grupo, materiaId } = useParametrosSemana();
+  const { materiaId, materia } = useMateriaDeRuta();
+  const semana = Number(useParams<{ semana: string }>().semana);
   const { guardarContenidoSemana, eliminarContenidoSemana } = useCasosDeUso();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const contenido = useContenidoSemana(materiaId, semana);
-  const volver = rutas.semana(grupoId, semana);
+  const volver = rutas.materia(materiaId);
+  const enBorrador = materia.data?.plan.estado === 'borrador';
+  const refrescarMateria = () => queryClient.invalidateQueries({ queryKey: claves.datosMateria(materiaId) });
 
   const guardado = useMutation({
     mutationFn: (valores: FormularioContenidoValores) =>
@@ -27,49 +33,52 @@ export const EditorContenidoPage = () => {
         semana,
         datos: aCambiosContenido(valores, contenido.data ?? null),
       }),
-    onSuccess: (guardadoNuevo) => {
-      queryClient.setQueryData(claves.contenidoSemana(materiaId, semana), guardadoNuevo);
+    onSuccess: () => {
+      void refrescarMateria();
       navigate(volver);
     },
   });
+
+  if (!esSemanaDeMateria(semana)) {
+    return (
+      <main className="max-w-[900px] mx-auto p-gutter">
+        <EstadoVacio icono="error" titulo="Cada materia tiene solo las semanas 1 y 2." />
+      </main>
+    );
+  }
 
   const existente = contenido.data;
 
   return (
     <main className="min-h-screen">
       <div className="max-w-[900px] mx-auto p-gutter py-8 space-y-8">
-        <EncabezadoSemana
-          grupoId={grupoId}
-          semana={semana}
-          grupo={grupo.data}
-          conNavegacion={false}
-        />
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-title-md font-headline-lg text-on-surface">
-            {existente ? 'Editar contenido de la semana' : 'Crear contenido de la semana'}
-          </h2>
-          {existente && (
-            <AccionEliminar
-              etiqueta="Eliminar contenido"
-              titulo="¿Eliminar el contenido de esta semana?"
-              alEliminar={() => eliminarContenidoSemana.ejecutar(existente.id)}
-              alEliminado={() => {
-                queryClient.setQueryData(claves.contenidoSemana(materiaId, semana), null);
-                navigate(volver);
-              }}
-            >
-              <p>
-                Se borrarán el tema, la introducción, los recursos y el link de la clase grabada de la semana {semana}. El
-                cambio aplica a todos los grupos de esta materia.
-              </p>
-            </AccionEliminar>
-          )}
-        </div>
+        <header className="space-y-3">
+          {materia.data && <EncabezadoMateria materia={materia.data} />}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-headline-lg-mobile md:text-headline-lg font-headline-lg text-on-surface">
+              {existente ? 'Editar' : 'Crear'} contenido · Semana {semana}
+            </h1>
+            {existente && enBorrador && (
+              <AccionEliminar
+                etiqueta="Eliminar contenido"
+                titulo="¿Eliminar el contenido de esta semana?"
+                alEliminar={() => eliminarContenidoSemana.ejecutar(existente.id)}
+                alEliminado={() => {
+                  void refrescarMateria();
+                  navigate(volver);
+                }}
+              >
+                <p>Se borrarán el tema, la introducción, los recursos y la liga de la clase grabada de la semana {semana}.</p>
+              </AccionEliminar>
+            )}
+          </div>
+          {materia.data && !enBorrador && <AvisoPlanPublicado />}
+        </header>
 
-        {(grupo.isPending || (Boolean(materiaId) && contenido.isPending)) && <Cargando />}
-        {grupo.error && <MensajeError error={grupo.error} alReintentar={() => void grupo.refetch()} />}
+        {(materia.isPending || contenido.isPending) && <Cargando />}
+        {materia.error && <MensajeError error={materia.error} alReintentar={() => void materia.refetch()} />}
         {contenido.error && <MensajeError error={contenido.error} alReintentar={() => void contenido.refetch()} />}
-        {contenido.data !== undefined && (
+        {materia.data && contenido.data !== undefined && (
           <FormularioContenido
             key={contenido.data?.id ?? 'nuevo'}
             inicial={contenido.data}
