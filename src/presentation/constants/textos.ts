@@ -1,4 +1,3 @@
-import type { TipoExamen } from '../../domain/entities/Examen';
 import type { Rol } from '../../domain/entities/Usuario';
 
 export const APP_TEXTS = {
@@ -16,25 +15,24 @@ export const APP_TEXTS = {
   dashboard: {
     greeting: '¡Hola',
     subtitulo: {
-      alumno: 'Estos son los grupos en los que estás inscrito. Elige una semana para ver su contenido.',
-      maestro: 'Estos son los grupos que impartes. Elige una semana para publicar o revisar su contenido.',
+      alumno: 'Elige una semana para ver el contenido de tus materias y presentar sus exámenes.',
+      maestro: 'Estas son las materias que tienes asignadas. Entra a una para corregir su contenido y sus exámenes.',
       admin: '',
     } satisfies Record<Rol, string>,
     goToCourse: 'Ir a la semana actual',
     weeklyProgress: 'Calendario semanal',
-    sinGrupos: 'Aún no tienes grupos asignados.',
+    sinGrupos: 'Aún no estás inscrito en un grupo.',
+    sinMaterias: 'Aún no tienes materias asignadas.',
     calificaciones: 'Calificaciones',
-    calificacionAcumulada: 'Calificación acumulada',
-    ayudaCalificacion: 'Lo que llevas hasta ahora: cada semana y el examen final valen lo mismo; lo que falta por presentar cuenta 0.',
+    calificacionAcumulada: 'Promedio general',
+    ayudaCalificacion: 'Promedio de tus materias. Cada materia es el promedio de sus 4 exámenes; lo que falta por presentar cuenta 0.',
   },
   semana: {
-    sinContenido: 'El maestro aún no publica el contenido de esta semana',
+    sinContenido: 'Esta semana aún no tiene contenido',
     verGrabacion: 'Ver clase grabada',
     sinGrabacion: 'La grabación de esta clase aún no está disponible.',
     hacerExamen: 'Hacer examen',
-    sinExamen: 'Sin examen esta semana',
-    hacerReposicion: 'Reposición',
-    sinReposicion: 'Sin reposición esta semana',
+    sinExamen: 'Examen no disponible',
   },
 };
 
@@ -44,15 +42,7 @@ export const ETIQUETAS_ROL: Record<Rol, string> = {
   admin: 'Administrador',
 };
 
-export const ETIQUETAS_TIPO_EXAMEN: Record<TipoExamen, string> = {
-  Semanal: 'Semanal',
-  Reposicion: 'Reposición',
-  Final: 'Final',
-};
-
-/** "Examen semanal", "Reposición" o "Examen final". */
-export const NOMBRE_TIPO_EXAMEN: Record<TipoExamen, string> = {
-  Semanal: 'Examen semanal',
-  Reposicion: 'Reposición',
-  Final: 'Examen final',
-};
+export const ETIQUETAS_ESTADO_PLAN = {
+  borrador: 'Borrador',
+  publicado: 'Publicado',
+} as const;

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import type { ExamenGrupo, ResultadoConRevision } from '../../domain/entities/Examen';
+import { ESCALA_CALIFICACION, type ExamenGrupo, type ResultadoConRevision } from '../../domain/entities/Examen';
 import { revisionDe } from '../../domain/rules/examen';
 import { estadoDeVentana } from '../../domain/rules/ventana';
 import { Cargando } from '../components/common/Cargando';
@@ -10,7 +10,6 @@ import { estilos } from '../components/common/estilos';
 import { FormularioRespuestas } from '../components/examen/FormularioRespuestas';
 import { ResultadoExamen } from '../components/examen/ResultadoExamen';
 import { RevisionExamen } from '../components/examen/RevisionExamen';
-import { NOMBRE_TIPO_EXAMEN } from '../constants/textos';
 import { useExamenGrupo } from '../hooks/consultas';
 import { formatearFechaHora } from '../utils/fechas';
 import { irArribaDeLaPagina } from '../utils/scroll';
@@ -29,7 +28,7 @@ const ContenidoExamen = ({ grupoId, examen, alRecargar }: ContenidoExamenProps) 
   if (resultadoNuevo) {
     return (
       <>
-        <ResultadoExamen resultado={resultadoNuevo} puntajeMaximo={examen.puntajeMaximo} />
+        <ResultadoExamen resultado={resultadoNuevo} />
         <RevisionExamen preguntas={resultadoNuevo.revision} cierra={resultadoNuevo.ventana?.cierra ?? examen.ventana.cierra} />
       </>
     );
@@ -39,7 +38,7 @@ const ContenidoExamen = ({ grupoId, examen, alRecargar }: ContenidoExamenProps) 
     const revision = revisionDe(examen.preguntas);
     return (
       <>
-        <ResultadoExamen resultado={examen.miIntento} puntajeMaximo={examen.puntajeMaximo} />
+        <ResultadoExamen resultado={examen.miIntento} />
         {revision.length > 0 ? (
           <RevisionExamen preguntas={revision} cierra={examen.ventana.cierra} />
         ) : (
@@ -105,8 +104,7 @@ export const ExamenPage = () => {
           <>
             <header className="space-y-2">
               <p className="text-label-caps font-label-caps text-primary uppercase">
-                {NOMBRE_TIPO_EXAMEN[examen.tipo]}
-                {examen.semana ? ` · Semana ${examen.semana}` : ''}
+                {examen.materia.nombre} · Semana {examen.semana} · Examen {examen.numero}
               </p>
               <h1 className="text-headline-lg-mobile md:text-headline-lg font-headline-lg text-on-surface">{examen.titulo}</h1>
               {examen.descripcion && <p className="text-body-lg text-on-surface-variant whitespace-pre-line">{examen.descripcion}</p>}
@@ -117,7 +115,7 @@ export const ExamenPage = () => {
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-[16px]">grade</span>
-                  Puntaje máximo: {examen.puntajeMaximo}
+                  Se califica sobre {ESCALA_CALIFICACION}
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-[16px]">event</span>

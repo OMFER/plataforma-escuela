@@ -6,7 +6,8 @@ const semanaValida = (id: string, semana: number): boolean => Boolean(id) && Num
 
 /**
  * Claves de caché centralizadas para poder invalidarlas desde las mutaciones.
- * Todo lo de un grupo cuelga de `['grupos', grupoId]`, así se refresca con una sola invalidación.
+ * Todo lo de un grupo cuelga de `['grupos', grupoId]`, lo de un plan de `['planes', planId]`
+ * y lo de una materia de `['materias', materiaId]`: cada uno se refresca con una sola invalidación.
  */
 export const claves = {
   grupos: ['grupos'] as const,
@@ -17,11 +18,22 @@ export const claves = {
   alumnosGrupo: (grupoId: string) => ['grupos', grupoId, 'alumnos'] as const,
   calificaciones: (grupoId: string) => ['grupos', grupoId, 'calificaciones'] as const,
   examenesGrupo: (grupoId: string) => ['grupos', grupoId, 'examenes'] as const,
-  examenesSemana: (grupoId: string, semana: number) => ['grupos', grupoId, 'examenes', 'semana', semana] as const,
+  examenesSemana: (grupoId: string, materiaId: string, semana: number) =>
+    ['grupos', grupoId, 'examenes', 'semana', materiaId, semana] as const,
   examenGrupo: (grupoId: string, examenId: string) => ['grupos', grupoId, 'examenes', 'id', examenId] as const,
-  intentos: (grupoId: string, examenId: string) => ['grupos', grupoId, 'examenes', 'intentos', examenId] as const,
+  planes: ['planes'] as const,
+  listaPlanes: ['planes', 'lista'] as const,
+  datosPlan: (planId: string) => ['planes', planId] as const,
+  plan: (planId: string) => ['planes', planId, 'detalle'] as const,
+  revisionPlan: (planId: string) => ['planes', planId, 'revision'] as const,
+  cambiosPlan: (planId: string) => ['planes', planId, 'cambios'] as const,
   materias: ['materias'] as const,
-  contenidoSemana: (materiaId: string, semana: number) => ['contenido', materiaId, semana] as const,
+  misMaterias: ['materias', 'mias'] as const,
+  datosMateria: (materiaId: string) => ['materias', materiaId] as const,
+  materia: (materiaId: string) => ['materias', materiaId, 'detalle'] as const,
+  contenidoMateria: (materiaId: string) => ['materias', materiaId, 'contenido'] as const,
+  contenidoSemana: (materiaId: string, semana: number) => ['materias', materiaId, 'contenido', semana] as const,
+  examenesMateria: (materiaId: string) => ['materias', materiaId, 'examenes'] as const,
   examen: (id: string) => ['examenes', id] as const,
   usuarios: (rol?: Rol) => ['usuarios', rol ?? 'todos'] as const,
 };
@@ -55,9 +67,55 @@ export const useCalificaciones = (grupoId: string) => {
   });
 };
 
-export const useMaterias = () => {
-  const { listarMaterias } = useCasosDeUso();
-  return useQuery({ queryKey: claves.materias, queryFn: () => listarMaterias.ejecutar() });
+export const usePlanes = () => {
+  const { listarPlanes } = useCasosDeUso();
+  return useQuery({ queryKey: claves.listaPlanes, queryFn: () => listarPlanes.ejecutar() });
+};
+
+export const usePlan = (planId: string) => {
+  const { obtenerPlan } = useCasosDeUso();
+  return useQuery({ queryKey: claves.plan(planId), queryFn: () => obtenerPlan.ejecutar(planId), enabled: Boolean(planId) });
+};
+
+export const useRevisionPlan = (planId: string, habilitado = true) => {
+  const { revisarPlan } = useCasosDeUso();
+  return useQuery({
+    queryKey: claves.revisionPlan(planId),
+    queryFn: () => revisarPlan.ejecutar(planId),
+    enabled: Boolean(planId) && habilitado,
+  });
+};
+
+export const useCambiosPlan = (planId: string, habilitado = true) => {
+  const { listarCambiosPlan } = useCasosDeUso();
+  return useQuery({
+    queryKey: claves.cambiosPlan(planId),
+    queryFn: () => listarCambiosPlan.ejecutar(planId),
+    enabled: Boolean(planId) && habilitado,
+  });
+};
+
+export const useMisMaterias = () => {
+  const { listarMisMaterias } = useCasosDeUso();
+  return useQuery({ queryKey: claves.misMaterias, queryFn: () => listarMisMaterias.ejecutar() });
+};
+
+export const useMateria = (materiaId: string) => {
+  const { obtenerMateria } = useCasosDeUso();
+  return useQuery({
+    queryKey: claves.materia(materiaId),
+    queryFn: () => obtenerMateria.ejecutar(materiaId),
+    enabled: Boolean(materiaId),
+  });
+};
+
+export const useContenidoMateria = (materiaId: string) => {
+  const { listarContenidoMateria } = useCasosDeUso();
+  return useQuery({
+    queryKey: claves.contenidoMateria(materiaId),
+    queryFn: () => listarContenidoMateria.ejecutar(materiaId),
+    enabled: Boolean(materiaId),
+  });
 };
 
 export const useContenidoSemana = (materiaId: string, semana: number) => {
@@ -69,21 +127,22 @@ export const useContenidoSemana = (materiaId: string, semana: number) => {
   });
 };
 
-export const useExamenesGrupo = (grupoId: string) => {
-  const { listarExamenesGrupo } = useCasosDeUso();
+/** Exámenes de la materia con sus respuestas (su maestro o el admin). */
+export const useExamenesMateria = (materiaId: string) => {
+  const { listarExamenesMateria } = useCasosDeUso();
   return useQuery({
-    queryKey: claves.examenesGrupo(grupoId),
-    queryFn: () => listarExamenesGrupo.ejecutar(grupoId),
-    enabled: Boolean(grupoId),
+    queryKey: claves.examenesMateria(materiaId),
+    queryFn: () => listarExamenesMateria.ejecutar(materiaId),
+    enabled: Boolean(materiaId),
   });
 };
 
-export const useExamenesSemana = (grupoId: string, semana: number) => {
+export const useExamenesSemana = (grupoId: string, materiaId: string, semana: number) => {
   const { obtenerExamenesSemana } = useCasosDeUso();
   return useQuery({
-    queryKey: claves.examenesSemana(grupoId, semana),
-    queryFn: () => obtenerExamenesSemana.ejecutar(grupoId, semana),
-    enabled: semanaValida(grupoId, semana),
+    queryKey: claves.examenesSemana(grupoId, materiaId, semana),
+    queryFn: () => obtenerExamenesSemana.ejecutar(grupoId, materiaId, semana),
+    enabled: Boolean(grupoId) && semanaValida(materiaId, semana),
   });
 };
 
@@ -96,22 +155,13 @@ export const useExamenGrupo = (grupoId: string, examenId: string) => {
   });
 };
 
-/** Plantilla con respuestas (solo maestro). */
+/** Plantilla con respuestas (su maestro o el admin). */
 export const useExamen = (examenId: string | undefined) => {
   const { obtenerExamen } = useCasosDeUso();
   return useQuery({
     queryKey: claves.examen(examenId ?? ''),
     queryFn: () => obtenerExamen.ejecutar(examenId ?? ''),
     enabled: Boolean(examenId),
-  });
-};
-
-export const useIntentosExamen = (grupoId: string, examenId: string | undefined) => {
-  const { obtenerIntentosExamen } = useCasosDeUso();
-  return useQuery({
-    queryKey: claves.intentos(grupoId, examenId ?? ''),
-    queryFn: () => obtenerIntentosExamen.ejecutar(grupoId, examenId ?? ''),
-    enabled: Boolean(grupoId && examenId),
   });
 };
 

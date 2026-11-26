@@ -1,70 +1,73 @@
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type { CalificacionesAlumno } from '../domain/entities/Calificaciones';
+import type { CalificacionesGrupo } from '../domain/entities/Calificaciones';
+import { boletaMateria, sesionAdmin, sesionAlumno, sesionMaestro } from '../test/datos';
 import { grupoEjemplo } from '../test/fakes';
-import { sesionAlumno, sesionMaestro } from '../test/datos';
 import { renderApp } from '../test/renderApp';
 
-const nota = (calificacion: number) => ({ calificacion, puntajeMaximo: 10 });
+const materias = [
+  { id: 'm1', nombre: 'Matemáticas', bloque: 1 },
+  { id: 'm2', nombre: 'Historia', bloque: 1 },
+  { id: 'm3', nombre: 'Química', bloque: 2 },
+];
 
-const calificacionesAna: CalificacionesAlumno = {
+const ana = {
   alumno: { id: 'u1', nombre: 'Ana López', correo: 'ana@escuela.mx' },
-  semanas: [
-    { semana: 1, semanal: nota(5), reposicion: nota(9), mejor: nota(9) },
-    { semana: 2, semanal: nota(7), reposicion: null, mejor: nota(7) },
-  ],
-  final: null,
-  semestre: 0.9,
+  materias: [boletaMateria('m1', [8, 9, 7, 6]), boletaMateria('m2', [5, 5, 4, 6]), boletaMateria('m3', [10])],
+  promedioGeneral: 4.9,
 };
-
-const calificacionesBeto: CalificacionesAlumno = {
+const beto = {
   alumno: { id: 'u4', nombre: 'Beto Gil', correo: 'beto@escuela.mx' },
-  semanas: [{ semana: 1, semanal: nota(10), reposicion: null, mejor: nota(10) }],
-  final: nota(8),
-  semestre: 1.1,
+  materias: [boletaMateria('m1', [10, 10, 10, 10]), boletaMateria('m2', []), boletaMateria('m3', [])],
+  promedioGeneral: 3.3,
 };
 
-const filas = () => screen.getAllByRole('row').slice(1);
+const sembrar = (calificaciones: CalificacionesGrupo) => ({
+  preparar: (r: { grupos: { lista: unknown[]; calificaciones: Record<string, CalificacionesGrupo> } }) => {
+    r.grupos.lista.push(grupoEjemplo);
+    r.grupos.calificaciones.g1 = calificaciones;
+  },
+});
+
+const filas = async () => (await screen.findAllByRole('row')).slice(1);
 
 describe('calificaciones', () => {
-  it('el alumno ve su tabla por semana (semanal, reposición y mejor) y el final', async () => {
-    renderApp('/grupos/g1/calificaciones', {
-      sesion: sesionAlumno,
-      preparar: (r) => {
-        r.grupos.lista.push(grupoEjemplo);
-        r.grupos.calificaciones.g1 = [calificacionesAna];
-      },
-    });
-
+  it('el alumno ve sus 4 exámenes por materia, el promedio, si aprobó y su promedio general', async () => {
+    renderApp('/grupos/g1/calificaciones', { sesion: sesionAlumno, ...sembrar({ materias, boletas: [ana] }) });
     expect(await screen.findByRole('heading', { name: 'Mis calificaciones' })).toBeInTheDocument();
-    await screen.findByRole('table');
-    expect(screen.getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['Semana', 'Semanal', 'Reposición', 'Mejor']);
-    const [semana1, semana2] = filas();
-    expect(within(semana1!).getAllByRole('cell').map((c) => c.textContent)).toEqual(['5 / 10', '9 / 10', '9 / 10']);
-    expect(within(semana2!).getAllByRole('cell').map((c) => c.textContent)).toEqual(['7 / 10', '—', '7 / 10']);
-    expect(screen.getByText(/Examen final:/)).toHaveTextContent('Examen final: —');
+    expect(screen.getByText(/Grupo Generación agosto/)).toBeInTheDocument();
+
+    const [mate, historia, quimica] = await filas();
+    expect(within(mate!).getAllByRole('cell').map((c) => c.textContent)).toEqual(['8', '9', '7', '6', '7.5', 'Aprobada']);
+    expect(within(historia!).getAllByRole('cell').map((c) => c.textContent)).toEqual(['5', '5', '4', '6', '5', 'Reprobada']);
+    expect(within(quimica!).getAllByRole('cell').map((c) => c.textContent)).toEqual(['10', '—', '—', '—', '2.5', 'En curso']);
+    expect(screen.getByText(/Promedio general:/)).toHaveTextContent('Promedio general: 4.9');
   });
 
-  it('el maestro ve a todos los alumnos con la mejor nota por semana y el final', async () => {
-    renderApp('/grupos/g1/calificaciones', {
-      sesion: sesionMaestro,
-      preparar: (r) => {
-        r.grupos.lista.push(grupoEjemplo);
-        r.grupos.calificaciones.g1 = [calificacionesBeto, calificacionesAna];
-      },
-    });
-
+  it('el maestro ve a cada alumno con el promedio de cada materia y el general', async () => {
+    renderApp('/grupos/g1/calificaciones', { sesion: sesionMaestro, ...sembrar({ materias, boletas: [ana, beto] }) });
     expect(await screen.findByRole('heading', { name: 'Calificaciones del grupo' })).toBeInTheDocument();
-    await screen.findByRole('table');
-    expect(screen.getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['Alumno', 'Sem. 1', 'Sem. 2', 'Final']);
-    const [ana, beto] = filas();
-    expect(within(ana!).getByRole('rowheader')).toHaveTextContent('Ana López');
-    expect(within(ana!).getAllByRole('cell').map((c) => c.textContent)).toEqual(['9 / 10', '7 / 10', '—']);
-    expect(within(beto!).getAllByRole('cell').map((c) => c.textContent)).toEqual(['10 / 10', '—', '8 / 10']);
+    expect((await screen.findAllByRole('columnheader')).map((c) => c.textContent)).toEqual([
+      'Alumno',
+      'Matemáticas',
+      'Historia',
+      'Química',
+      'General',
+    ]);
+    const [filaAna, filaBeto] = await filas();
+    expect(within(filaAna!).getAllByRole('cell').map((c) => c.textContent)).toEqual(['7.5', '5', '2.5', '4.9']);
+    // Historia ya terminó sin aprobar: se marca en rojo
+    expect(within(filaAna!).getAllByRole('cell')[1]).toHaveClass('text-error');
+    expect(within(filaBeto!).getAllByRole('cell').map((c) => c.textContent)).toEqual(['10', '0', '0', '3.3']);
+  });
+
+  it('el admin también puede consultarlas', async () => {
+    renderApp('/grupos/g1/calificaciones', { sesion: sesionAdmin, ...sembrar({ materias, boletas: [ana] }) });
+    expect(await screen.findByRole('heading', { name: 'Calificaciones del grupo' })).toBeInTheDocument();
   });
 
   it('sin alumnos inscritos lo indica', async () => {
-    renderApp('/grupos/g1/calificaciones', { sesion: sesionMaestro, preparar: (r) => r.grupos.lista.push(grupoEjemplo) });
+    renderApp('/grupos/g1/calificaciones', { sesion: sesionMaestro, ...sembrar({ materias, boletas: [] }) });
     expect(await screen.findByText('Aún no hay alumnos inscritos en este grupo.')).toBeInTheDocument();
   });
 });

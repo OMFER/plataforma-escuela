@@ -47,7 +47,7 @@ describe('pantalla de examen del alumno', () => {
       preparar: (r) => r.examenesGrupo.lista.push({ grupoId: 'g1', resumen: resumenExamen(), preguntas: preguntasEjemplo }),
     });
 
-    expect(await screen.findByRole('heading', { name: 'Quiz semana 2' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Semana 2 · Examen 1' })).toBeInTheDocument();
     expect(screen.getByText(/Disponible hasta el 10 de enero de 2099/)).toBeInTheDocument();
     const enviar = screen.getByRole('button', { name: /Enviar respuestas/ });
     expect(enviar).toBeDisabled();

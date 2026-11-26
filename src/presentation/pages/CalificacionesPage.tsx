@@ -12,7 +12,7 @@ export const CalificacionesPage = () => {
   const { grupoId, grupo } = useGrupoDeRuta();
   const calificaciones = useCalificaciones(grupoId);
   const esAlumno = usuario.rol === 'alumno';
-  const propias = calificaciones.data?.[0];
+  const propia = calificaciones.data?.boletas[0];
 
   return (
     <main className="min-h-screen">
@@ -20,11 +20,8 @@ export const CalificacionesPage = () => {
         <header className="space-y-1">
           {grupo.data && (
             <p className="text-title-md text-primary">
-              {grupo.data.materia.nombre}
-              <span className="text-body-sm text-on-surface-variant font-normal">
-                {' '}
-                · Grupo {grupo.data.nombre} · {grupo.data.periodo}
-              </span>
+              {grupo.data.plan.nombre}
+              <span className="text-body-sm text-on-surface-variant font-normal"> · Grupo {grupo.data.nombre}</span>
             </p>
           )}
           <h1 className="text-headline-lg-mobile md:text-headline-lg font-headline-lg text-on-surface">
@@ -36,8 +33,8 @@ export const CalificacionesPage = () => {
         {calificaciones.error && <MensajeError error={calificaciones.error} alReintentar={() => void calificaciones.refetch()} />}
         {calificaciones.data &&
           (esAlumno ? (
-            propias ? (
-              <TablaCalificacionesAlumno calificaciones={propias} />
+            propia ? (
+              <TablaCalificacionesAlumno materias={calificaciones.data.materias} boleta={propia} />
             ) : (
               <EstadoVacio icono="grading" titulo="Aún no tienes calificaciones en este grupo." />
             )

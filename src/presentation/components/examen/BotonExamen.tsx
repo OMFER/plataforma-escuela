@@ -11,11 +11,11 @@ interface BotonExamenProps {
   grupoId: string;
   examen: ResumenExamen | null | undefined;
   cargando?: boolean;
-  /** Nombre del examen para mostrar junto a la calificación, p. ej. "Examen semanal". */
+  /** Nombre del examen para mostrar junto a la calificación, p. ej. "Examen 1". */
   nombre: string;
-  /** Texto del botón cuando el examen se puede responder, p. ej. "Hacer examen". */
+  /** Texto del botón cuando el examen se puede responder, p. ej. "Hacer examen 1". */
   accion: string;
-  /** Texto cuando no existe el examen, p. ej. "Sin examen esta semana". */
+  /** Texto cuando no existe el examen. */
   textoSinExamen: string;
   icono?: string;
 }
@@ -55,7 +55,7 @@ export const BotonExamen = ({ grupoId, examen, cargando = false, nombre, accion,
           className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-secondary-container text-on-secondary-container font-bold hover:opacity-90"
         >
           <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-          {nombre} · Calificación: {formatearCalificacion(examen.miIntento.calificacion, examen.puntajeMaximo)}
+          {nombre} · Calificación: {formatearCalificacion(examen.miIntento.calificacion)}
         </Link>
         {detalle('Ya lo respondiste. Toca para ver tu revisión.')}
       </div>

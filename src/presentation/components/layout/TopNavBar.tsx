@@ -24,9 +24,9 @@ export const TopNavBar = ({ menuAbierto, alAlternarMenu }: TopNavBarProps) => {
         {grupo && (
           <p
             className={`text-title-md font-bold text-on-surface truncate min-w-0 ${menuAbierto ? '' : 'border-l border-outline-variant pl-3'}`}
-            title={grupo.materia.nombre}
+            title={grupo.plan.nombre}
           >
-            {grupo.materia.nombre}
+            {grupo.plan.nombre || `Grupo ${grupo.nombre}`}
           </p>
         )}
 

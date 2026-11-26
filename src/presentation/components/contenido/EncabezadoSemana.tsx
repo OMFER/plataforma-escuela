@@ -8,57 +8,55 @@ const ETIQUETA_ESTADO = { completada: 'Completada', actual: 'Semana actual', fut
 
 interface EncabezadoSemanaProps {
   grupoId: string;
+  /** Semana del grupo. */
   semana: number;
   grupo?: Grupo | null;
-  /** Muestra los botones Anterior/Siguiente para cambiar de semana. */
-  conNavegacion?: boolean;
 }
 
-export const EncabezadoSemana = ({ grupoId, semana, grupo, conNavegacion = true }: EncabezadoSemanaProps) => {
+/** Semana del grupo con sus fechas y los botones para ir a la anterior o a la siguiente. */
+export const EncabezadoSemana = ({ grupoId, semana, grupo }: EncabezadoSemanaProps) => {
   const info = grupo ? buscarSemana(grupo.semanas, semana) : undefined;
-  const total = grupo?.materia.totalSemanas;
+  const total = grupo?.semanas.length;
 
   return (
-    <section className="space-y-4">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div className="space-y-1">
-          {grupo && (
-            <p className="text-title-md text-primary">
-              {grupo.materia.nombre}
-              <span className="text-body-sm text-on-surface-variant font-normal"> · Grupo {grupo.nombre} · {grupo.periodo}</span>
-            </p>
-          )}
-          <h1 className="text-headline-lg-mobile md:text-headline-lg font-headline-lg text-on-surface">
-            Semana {semana}
-            {total ? <span className="text-on-surface-variant font-normal"> de {total}</span> : null}
-          </h1>
-          {info && (
-            <p className="text-body-sm text-on-surface-variant flex items-center gap-2">
-              <span className="material-symbols-outlined text-[16px]">date_range</span>
-              {formatearRangoSemana(info.inicio, info.fin)}
-              <span className="px-2 py-0.5 bg-surface-container-highest text-[10px] font-bold rounded uppercase">
-                {ETIQUETA_ESTADO[info.estado]}
-              </span>
-            </p>
-          )}
-        </div>
-        {conNavegacion && total ? (
-          <nav className="flex gap-2" aria-label="Cambiar de semana">
-            {semana > 1 && (
-              <Link to={rutas.semana(grupoId, semana - 1)} className={estilos.botonSecundario}>
-                <span className="material-symbols-outlined text-[18px]">chevron_left</span>
-                Anterior
-              </Link>
-            )}
-            {semana < total && (
-              <Link to={rutas.semana(grupoId, semana + 1)} className={estilos.botonSecundario}>
-                Siguiente
-                <span className="material-symbols-outlined text-[18px]">chevron_right</span>
-              </Link>
-            )}
-          </nav>
-        ) : null}
+    <section className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="space-y-1">
+        {grupo && (
+          <p className="text-title-md text-primary">
+            {grupo.plan.nombre}
+            <span className="text-body-sm text-on-surface-variant font-normal"> · Grupo {grupo.nombre}</span>
+          </p>
+        )}
+        <h1 className="text-headline-lg-mobile md:text-headline-lg font-headline-lg text-on-surface">
+          Semana {semana}
+          {total ? <span className="text-on-surface-variant font-normal"> de {total}</span> : null}
+        </h1>
+        {info && (
+          <p className="text-body-sm text-on-surface-variant flex items-center gap-2">
+            <span className="material-symbols-outlined text-[16px]">date_range</span>
+            {formatearRangoSemana(info.inicio, info.fin)}
+            <span className="px-2 py-0.5 bg-surface-container-highest text-[10px] font-bold rounded uppercase">
+              {ETIQUETA_ESTADO[info.estado]}
+            </span>
+          </p>
+        )}
       </div>
+      {total ? (
+        <nav className="flex gap-2" aria-label="Cambiar de semana">
+          {semana > 1 && (
+            <Link to={rutas.semana(grupoId, semana - 1)} className={estilos.botonSecundario}>
+              <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+              Anterior
+            </Link>
+          )}
+          {semana < total && (
+            <Link to={rutas.semana(grupoId, semana + 1)} className={estilos.botonSecundario}>
+              Siguiente
+              <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+            </Link>
+          )}
+        </nav>
+      ) : null}
     </section>
   );
 };

@@ -9,7 +9,7 @@ export interface ElementoNavegacion {
 
 const NAVEGACION: Record<Rol, ElementoNavegacion[]> = {
   alumno: [{ path: rutas.inicio, label: 'Mis materias', icon: 'calendar_month' }],
-  maestro: [{ path: rutas.inicio, label: 'Mis grupos', icon: 'calendar_month' }],
+  maestro: [{ path: rutas.inicio, label: 'Mis materias', icon: 'menu_book' }],
   admin: [{ path: rutas.admin, label: 'Administración', icon: 'admin_panel_settings' }],
 };
 
