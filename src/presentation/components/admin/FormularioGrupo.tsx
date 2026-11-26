@@ -2,30 +2,31 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { claves, useMaterias, useUsuarios } from '../../hooks/consultas';
+import { nombreDePlan } from '../../../domain/entities/Plan';
+import { esLunes } from '../../../domain/rules/fechas';
+import { claves, usePlanes } from '../../hooks/consultas';
 import { useCasosDeUso } from '../../providers/DependenciasContext';
 import { Campo } from '../common/Campo';
 import { MensajeError } from '../common/MensajeError';
 import { estilos } from '../common/estilos';
 
 const esquema = z.object({
-  materiaId: z.string().min(1, 'Elige una materia.'),
-  maestroId: z.string().min(1, 'Elige un maestro.'),
+  planId: z.string().min(1, 'Elige un plan publicado.'),
   nombre: z.string().trim().min(1, 'Escribe el nombre del grupo.'),
-  periodo: z.string().trim().min(1, 'Escribe el periodo, por ejemplo 2026-B.'),
-  aula: z.string(),
-  fechaInicio: z.iso.date({ error: 'Elige la fecha de inicio.' }),
+  fechaInicio: z.iso
+    .date({ error: 'Elige la fecha de inicio.' })
+    .refine(esLunes, 'La fecha de inicio debe ser un lunes.'),
 });
 
 type Valores = z.infer<typeof esquema>;
 
-const VACIO: Valores = { materiaId: '', maestroId: '', nombre: '', periodo: '', aula: '', fechaInicio: '' };
+const VACIO: Valores = { planId: '', nombre: '', fechaInicio: '' };
 
 export const FormularioGrupo = () => {
   const { crearGrupo } = useCasosDeUso();
   const queryClient = useQueryClient();
-  const materias = useMaterias();
-  const maestros = useUsuarios('maestro');
+  const planes = usePlanes();
+  const publicados = planes.data?.filter((p) => p.estado === 'publicado') ?? [];
   const {
     register,
     handleSubmit,
@@ -45,49 +46,31 @@ export const FormularioGrupo = () => {
     <form onSubmit={handleSubmit((v) => alta.mutate(v))} noValidate className={`${estilos.tarjeta} space-y-4`}>
       <h3 className="text-title-md font-headline-lg text-on-surface">Nuevo grupo</h3>
       <Campo
-        etiqueta="Materia"
-        htmlFor="grupo-materia"
-        error={errors.materiaId?.message ?? (materias.error ? 'No se pudo cargar la lista de materias.' : undefined)}
+        etiqueta="Plan de estudios"
+        htmlFor="grupo-plan"
+        error={errors.planId?.message ?? (planes.error ? 'No se pudo cargar la lista de planes.' : undefined)}
+        ayuda="Solo aparecen los planes publicados."
       >
-        <select id="grupo-materia" className={estilos.input} disabled={materias.isPending} {...register('materiaId')}>
-          <option value="">{materias.isPending ? 'Cargando materias…' : 'Selecciona una materia'}</option>
-          {materias.data?.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.nombre}
+        <select id="grupo-plan" className={estilos.input} disabled={planes.isPending} {...register('planId')}>
+          <option value="">{planes.isPending ? 'Cargando planes…' : 'Selecciona un plan'}</option>
+          {publicados.map((p) => (
+            <option key={p.id} value={p.id}>
+              {nombreDePlan(p)}
             </option>
           ))}
         </select>
+      </Campo>
+      <Campo etiqueta="Nombre del grupo" htmlFor="grupo-nombre" error={errors.nombre?.message}>
+        <input id="grupo-nombre" placeholder="Generación enero 2027" className={estilos.input} {...register('nombre')} />
       </Campo>
       <Campo
-        etiqueta="Maestro"
-        htmlFor="grupo-maestro"
-        error={errors.maestroId?.message ?? (maestros.error ? 'No se pudo cargar la lista de maestros.' : undefined)}
+        etiqueta="Fecha de inicio"
+        htmlFor="grupo-inicio"
+        error={errors.fechaInicio?.message}
+        ayuda="Un lunes: ese día abre la semana 1."
       >
-        <select id="grupo-maestro" className={estilos.input} disabled={maestros.isPending} {...register('maestroId')}>
-          <option value="">{maestros.isPending ? 'Cargando maestros…' : 'Selecciona un maestro'}</option>
-          {maestros.data?.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.nombre}
-            </option>
-          ))}
-        </select>
+        <input id="grupo-inicio" type="date" className={estilos.input} {...register('fechaInicio')} />
       </Campo>
-      <div className="grid grid-cols-2 gap-4">
-        <Campo etiqueta="Grupo" htmlFor="grupo-nombre" error={errors.nombre?.message}>
-          <input id="grupo-nombre" placeholder="05" className={estilos.input} {...register('nombre')} />
-        </Campo>
-        <Campo etiqueta="Periodo" htmlFor="grupo-periodo" error={errors.periodo?.message}>
-          <input id="grupo-periodo" placeholder="2026-B" className={estilos.input} {...register('periodo')} />
-        </Campo>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <Campo etiqueta="Aula (opcional)" htmlFor="grupo-aula">
-          <input id="grupo-aula" className={estilos.input} {...register('aula')} />
-        </Campo>
-        <Campo etiqueta="Fecha de inicio" htmlFor="grupo-inicio" error={errors.fechaInicio?.message}>
-          <input id="grupo-inicio" type="date" className={estilos.input} {...register('fechaInicio')} />
-        </Campo>
-      </div>
       {alta.error && <MensajeError error={alta.error} />}
       {alta.isSuccess && (
         <p role="status" className="text-body-sm text-primary font-bold">

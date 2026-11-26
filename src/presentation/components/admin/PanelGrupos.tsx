@@ -1,6 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { nombreDePlan } from '../../../domain/entities/Plan';
 import { describirAvance } from '../../../domain/rules/semanas';
+import { rutas } from '../../routes/rutas';
 import { claves, useGrupos } from '../../hooks/consultas';
 import { useCasosDeUso } from '../../providers/DependenciasContext';
 import { formatearFecha } from '../../utils/fechas';
@@ -25,7 +28,8 @@ export const PanelGrupos = () => {
             Grupos
           </h2>
           <p className="text-body-sm text-on-surface-variant">
-            Cada semestre se abre un grupo por materia: maestro, fecha de inicio y alumnos inscritos.
+            Cada grupo es una generación que cursa una versión publicada del plan desde su fecha de inicio. Pueden coexistir
+            varios grupos, cada uno con sus alumnos y sus fechas.
           </p>
         </div>
         {isPending && <Cargando />}
@@ -34,20 +38,20 @@ export const PanelGrupos = () => {
         {grupos?.map((g) => {
           const expandido = abierto === g.id;
           return (
-            <article key={g.id} aria-label={`${g.materia.nombre}, grupo ${g.nombre}`} className={`${estilos.tarjeta} space-y-4`}>
+            <article key={g.id} aria-label={`Grupo ${g.nombre}`} className={`${estilos.tarjeta} space-y-4`}>
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-title-md font-headline-lg text-on-surface">{g.materia.nombre}</h3>
-                  <p className="text-body-sm text-outline">
-                    {[`Grupo ${g.nombre}`, g.periodo, g.aula && `Aula ${g.aula}`, g.maestro.nombre && `Maestro: ${g.maestro.nombre}`]
-                      .filter(Boolean)
-                      .join(' | ')}
-                  </p>
+                  <h3 className="text-title-md font-headline-lg text-on-surface">{g.nombre}</h3>
+                  <p className="text-body-sm text-outline">{nombreDePlan(g.plan)}</p>
                   <p className="text-[12px] text-on-surface-variant mt-1">
-                    Inicia {formatearFecha(g.fechaInicio)} · {describirAvance(g.semanaActual, g.materia.totalSemanas)}
+                    Inicia {formatearFecha(g.fechaInicio)} · {describirAvance(g.semanaActual, g.semanas.length)}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <Link to={rutas.calificaciones(g.id)} className={estilos.botonSecundario}>
+                    <span className="material-symbols-outlined text-[20px]">grading</span>
+                    Calificaciones
+                  </Link>
                   <button
                     type="button"
                     className={estilos.botonSecundario}
@@ -59,12 +63,12 @@ export const PanelGrupos = () => {
                   </button>
                   <AccionEliminar
                     etiqueta="Eliminar"
-                    titulo={`¿Eliminar el grupo ${g.nombre} de ${g.materia.nombre}?`}
+                    titulo={`¿Eliminar el grupo ${g.nombre}?`}
                     alEliminar={() => eliminarGrupo.ejecutar(g.id)}
                     alEliminado={() => void queryClient.invalidateQueries({ queryKey: claves.grupos })}
                   >
                     <p>Se borrarán las inscripciones de los alumnos y todas las calificaciones de este grupo.</p>
-                    <p>La materia, su contenido semanal y sus exámenes no se borran: podrás usarlos en otro grupo.</p>
+                    <p>El plan de estudios, su contenido y sus exámenes no se borran: los usan los demás grupos.</p>
                   </AccionEliminar>
                 </div>
               </div>

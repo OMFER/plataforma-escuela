@@ -2,8 +2,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { MAX_SEMANAS, MIN_SEMANAS, TOTAL_SEMANAS_POR_DEFECTO, type Materia } from '../../../domain/entities/Materia';
-import { claves } from '../../hooks/consultas';
+import type { Materia } from '../../../domain/entities/Materia';
+import { MAX_BLOQUES } from '../../../domain/entities/Plan';
+import { describirBloque } from '../../../domain/rules/semanas';
+import { claves, useUsuarios } from '../../hooks/consultas';
 import { useCasosDeUso } from '../../providers/DependenciasContext';
 import { Campo } from '../common/Campo';
 import { MensajeError } from '../common/MensajeError';
@@ -12,27 +14,29 @@ import { estilos } from '../common/estilos';
 const esquema = z.object({
   nombre: z.string().trim().min(1, 'El nombre es obligatorio.'),
   descripcion: z.string(),
-  totalSemanas: z
-    .number({ error: 'Escribe un número.' })
-    .int('Debe ser un número entero.')
-    .min(MIN_SEMANAS, `Mínimo ${MIN_SEMANAS} semana.`)
-    .max(MAX_SEMANAS, `Máximo ${MAX_SEMANAS} semanas.`),
+  bloque: z.number({ error: 'Elige el bloque.' }).int().min(1).max(MAX_BLOQUES),
+  maestroId: z.string(),
 });
 
 type Valores = z.infer<typeof esquema>;
 
-const VACIO: Valores = { nombre: '', descripcion: '', totalSemanas: TOTAL_SEMANAS_POR_DEFECTO };
+const BLOQUES = Array.from({ length: MAX_BLOQUES }, (_, i) => i + 1);
 
 interface FormularioMateriaProps {
-  /** Si se indica, el formulario edita esa materia en lugar de crear una nueva. */
+  planId: string;
+  /** Si se indica, el formulario corrige esa materia en lugar de crear una nueva. */
   materia?: Materia;
+  /** En un plan publicado la materia ya no cambia de bloque. */
+  bloqueFijo?: boolean;
   alTerminar?: () => void;
 }
 
-export const FormularioMateria = ({ materia, alTerminar }: FormularioMateriaProps) => {
+export const FormularioMateria = ({ planId, materia, bloqueFijo = false, alTerminar }: FormularioMateriaProps) => {
   const { crearMateria, actualizarMateria } = useCasosDeUso();
   const queryClient = useQueryClient();
+  const maestros = useUsuarios('maestro');
   const prefijo = materia ? `materia-${materia.id}` : 'materia';
+  const vacio: Valores = { nombre: '', descripcion: '', bloque: 1, maestroId: '' };
   const {
     register,
     handleSubmit,
@@ -41,16 +45,23 @@ export const FormularioMateria = ({ materia, alTerminar }: FormularioMateriaProp
   } = useForm<Valores>({
     resolver: zodResolver(esquema),
     defaultValues: materia
-      ? { nombre: materia.nombre, descripcion: materia.descripcion ?? '', totalSemanas: materia.totalSemanas }
-      : VACIO,
+      ? { nombre: materia.nombre, descripcion: materia.descripcion ?? '', bloque: materia.bloque, maestroId: materia.maestroId ?? '' }
+      : vacio,
   });
 
   const guardado = useMutation({
-    mutationFn: (valores: Valores) => (materia ? actualizarMateria.ejecutar(materia.id, valores) : crearMateria.ejecutar(valores)),
+    mutationFn: ({ maestroId, bloque, ...valores }: Valores) =>
+      materia
+        ? actualizarMateria.ejecutar(materia.id, {
+            ...valores,
+            ...(bloqueFijo ? {} : { bloque }),
+            maestroId: maestroId || null,
+          })
+        : crearMateria.ejecutar({ planId, ...valores, bloque, ...(maestroId ? { maestroId } : {}) }),
     onSuccess: () => {
-      if (!materia) reset(VACIO);
+      if (!materia) reset(vacio);
+      void queryClient.invalidateQueries({ queryKey: claves.datosPlan(planId) });
       void queryClient.invalidateQueries({ queryKey: claves.materias });
-      // Los grupos incluyen los datos de su materia.
       void queryClient.invalidateQueries({ queryKey: claves.grupos });
       alTerminar?.();
     },
@@ -62,32 +73,53 @@ export const FormularioMateria = ({ materia, alTerminar }: FormularioMateriaProp
       noValidate
       className={materia ? 'space-y-4 pt-4 border-t border-outline-variant' : `${estilos.tarjeta} space-y-4`}
     >
-      {!materia && <h3 className="text-title-md font-headline-lg text-on-surface">Nueva materia</h3>}
+      {!materia && <h3 className="text-title-md font-headline-lg text-on-surface">Agregar materia</h3>}
       <Campo etiqueta="Nombre" htmlFor={`${prefijo}-nombre`} error={errors.nombre?.message}>
         <input id={`${prefijo}-nombre`} className={estilos.input} {...register('nombre')} />
       </Campo>
       <Campo etiqueta="Descripción (opcional)" htmlFor={`${prefijo}-descripcion`}>
         <textarea id={`${prefijo}-descripcion`} rows={2} className={estilos.input} {...register('descripcion')} />
       </Campo>
-      <Campo
-        etiqueta="Total de semanas"
-        htmlFor={`${prefijo}-semanas`}
-        error={errors.totalSemanas?.message}
-        ayuda="Cuántas semanas dura la materia en cada semestre."
-      >
-        <input
-          id={`${prefijo}-semanas`}
-          type="number"
-          min={MIN_SEMANAS}
-          max={MAX_SEMANAS}
-          className={estilos.input}
-          {...register('totalSemanas', { valueAsNumber: true })}
-        />
-      </Campo>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Campo
+          etiqueta="Bloque"
+          htmlFor={`${prefijo}-bloque`}
+          error={errors.bloque?.message}
+          ayuda={bloqueFijo ? 'El plan ya está publicado: la materia no cambia de bloque.' : 'Las materias del mismo bloque se cursan al mismo tiempo.'}
+        >
+          <select
+            id={`${prefijo}-bloque`}
+            className={estilos.input}
+            disabled={bloqueFijo}
+            {...register('bloque', { valueAsNumber: true })}
+          >
+            {BLOQUES.map((b) => (
+              <option key={b} value={b}>
+                Bloque {b} · {describirBloque(b)}
+              </option>
+            ))}
+          </select>
+        </Campo>
+        <Campo
+          etiqueta="Maestro"
+          htmlFor={`${prefijo}-maestro`}
+          error={maestros.error ? 'No se pudo cargar la lista de maestros.' : undefined}
+          ayuda="La cuenta de la escuela que corrige su contenido y exámenes."
+        >
+          <select id={`${prefijo}-maestro`} className={estilos.input} disabled={maestros.isPending} {...register('maestroId')}>
+            <option value="">{maestros.isPending ? 'Cargando maestros…' : 'Sin asignar'}</option>
+            {maestros.data?.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.nombre} ({m.correo})
+              </option>
+            ))}
+          </select>
+        </Campo>
+      </div>
       {guardado.error && <MensajeError error={guardado.error} />}
       {!materia && guardado.isSuccess && (
         <p role="status" className="text-body-sm text-primary font-bold">
-          Materia «{guardado.data.nombre}» creada.
+          Materia «{guardado.data.nombre}» agregada.
         </p>
       )}
       <div className="flex flex-wrap justify-end gap-3">
@@ -98,7 +130,7 @@ export const FormularioMateria = ({ materia, alTerminar }: FormularioMateriaProp
         )}
         <button type="submit" className={`${estilos.botonPrimario} ${materia ? '' : 'w-full'}`} disabled={guardado.isPending}>
           <span className="material-symbols-outlined text-[20px]">{materia ? 'save' : 'add_circle'}</span>
-          {guardado.isPending ? 'Guardando…' : materia ? 'Guardar cambios' : 'Crear materia'}
+          {guardado.isPending ? 'Guardando…' : materia ? 'Guardar cambios' : 'Agregar materia'}
         </button>
       </div>
     </form>
